@@ -62,7 +62,7 @@
   <main class="canvas">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, msg in messages %}
-        <div class="otekh-banner {{ 'otekh-banner--error' if category == 'error' }}">{{ msg }}</div>
+        <div class="otekh-banner {{ 'otekh-banner--error' if category == 'error' }} {{ 'otekh-banner--warning' if category == 'warning' }}">{{ msg }}</div>
       {% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}

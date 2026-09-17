@@ -59,8 +59,9 @@ def run_safbuilder(dest_dir: Path | None = None) -> Path:
         raise FileNotFoundError("3_Verified has no data.csv (no verified entries).")
 
     # Record which entries are going into this package (for the manifest).
-    from . import store  # lazy: store imports csv_export, keep cycles out
-    entry_titles = [e["metadata"].get("title", "") for e in store.list_entries("verified")]
+    from . import csv_export, store  # lazy: store imports csv_export, keep cycles out
+    verified = store.list_entries("verified")
+    entry_titles = [e["metadata"].get("title", "") for e in verified]
 
     out_name = f"{_package_id()}_saf_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     result = subprocess.run(
@@ -99,6 +100,10 @@ def run_safbuilder(dest_dir: Path | None = None) -> Path:
     dest = dest_dir / zip_path.name
     shutil.move(str(zip_path), str(dest))
     shutil.rmtree(src / out_name, ignore_errors=True)  # unzipped SAF dir
+
+    # Master CSV: permanent record of everything packaged. The verified
+    # rows are purged right after this returns, so append now.
+    csv_export.append_master(verified)
 
     # Manifest beside the zip: lets the SAF DSpace Folder tab list which
     # entries are inside each package.

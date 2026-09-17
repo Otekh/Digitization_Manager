@@ -27,12 +27,20 @@ from flask import (  # web framework: app object, routing, sessions, templates
     session,
     url_for,
 )
-from werkzeug.utils import secure_filename  # sanitize uploaded filenames
-
 # App modules: auth = user accounts, ocr = PDF text-layer jobs,
 # options = dropdown metadata, paths = archive locations,
 # safbuilder = DSpace packaging, store = entry database + file moves.
-from . import APP_NAME, __version__, auth, ocr, options, paths, safbuilder, store
+from . import (
+    APP_NAME,
+    __version__,
+    auth,
+    csv_export,
+    ocr,
+    options,
+    paths,
+    safbuilder,
+    store,
+)
 
 # Date Created field: format key -> (form label, validation regex).
 # "unknown" has no pattern because it needs no value.
@@ -283,11 +291,7 @@ def validate_metadata(form) -> tuple[dict, list[str], set[str]]:
                 error_fields.add(name)
         return v
 
-    title = field("title", "Document Title")
-    file_name = field("file_name", "File Name")
-    if file_name and ("/" in file_name or "\\" in file_name or file_name.startswith(".")):
-        errors.append("File Name must not contain slashes or start with a dot.")
-        error_fields.add("file_name")
+    title = field("title", "Entry Title")
 
     location = dropdown("location", "Location", "Location")
     media_type = dropdown("media_type", "Media Type", "Media Type")
@@ -351,7 +355,6 @@ def validate_metadata(form) -> tuple[dict, list[str], set[str]]:
 
     metadata = {
         "title": title,
-        "file_name": file_name,
         "location": location,
         "media_type": media_type,
         "equipment_id": equipment_id,
@@ -368,30 +371,58 @@ def validate_metadata(form) -> tuple[dict, list[str], set[str]]:
     return metadata, errors, error_fields
 
 
-def save_uploads(file_storage_list, base_name: str, dest_dir: Path) -> list[str]:
-    """Save uploaded files as base.ext, base_2.ext, ... avoiding collisions."""
+def save_uploads(file_storage_list, dest_dir: Path) -> list[str]:
+    """Save uploads under their original filenames, unaltered.
+
+    Only the basename is kept (strips any client-side path so nothing
+    escapes the entry folder). Collisions get _2, _3, ... before the
+    extension; empty/dot names get a 'file' prefix."""
     saved = []
     existing = {p.name for p in dest_dir.iterdir()} if dest_dir.exists() else set()
-    n = 0
     for fs in file_storage_list:
         if not fs or not fs.filename:
             continue
-        ext = Path(secure_filename(fs.filename)).suffix
-        n += 1
-        name = f"{base_name}{ext}" if n == 1 else f"{base_name}_{n}{ext}"
-        while name in existing:
+        # Basename only: handles both / and \ style client paths.
+        name = fs.filename.replace("\\", "/").split("/")[-1]
+        if not name or name.startswith("."):
+            name = f"file{name}"
+        stem, ext = os.path.splitext(name)
+        candidate, n = name, 2
+        while candidate in existing:
+            candidate = f"{stem}_{n}{ext}"
             n += 1
-            name = f"{base_name}_{n}{ext}"
-        fs.save(dest_dir / name)
-        existing.add(name)
-        saved.append(name)
+        fs.save(dest_dir / candidate)
+        existing.add(candidate)
+        saved.append(candidate)
     return saved
+
+
+# Expected upload filename shape: DATE(or UNDATE)_XXX_title_TYPE.ext
+# e.g. 20240115_DVT_file-title-here_CASa.pdf — enforced on Finalize.
+# Strict parts: the date (YYYYMMDD or UNDATE) and the 3-char acronym.
+# The title and the trailing type acronym are any length — the type
+# codes aren't standardized yet and will grow.
+FILENAME_RE = re.compile(
+    r"^(?:\d{8}|UNDATE)_[A-Za-z0-9]{3}_.+[._][A-Za-z0-9]+\.[^.]+$",
+    re.IGNORECASE,
+)
+FILENAME_FORMAT = "YYYYMMDD_ACR_title_TYPE.ext or UNDATE_ACR_title_TYPE.ext"
+
+
+def _bad_filenames(uploads) -> list[str]:
+    """Uploaded filenames that don't match FILENAME_RE (basename check,
+    same normalization save_uploads uses)."""
+    bad = []
+    for fs in uploads:
+        name = fs.filename.replace("\\", "/").split("/")[-1]
+        if name and not FILENAME_RE.match(name):
+            bad.append(name)
+    return bad
 
 
 # Metadata fields that can be red-flagged on review (key, label).
 FLAGGABLE_FIELDS = [
-    ("title", "Document Title"),
-    ("file_name", "File Name"),
+    ("title", "Entry Title"),
     ("location", "Location"),
     ("media_type", "Media Type"),
     ("equipment_id", "Equipment ID"),
@@ -518,6 +549,14 @@ def new_entry():
         if not uploads:
             errors.append("Upload at least one file.")
             error_fields.add("files")
+        elif action == "finalized":
+            bad = _bad_filenames(uploads)
+            if bad:
+                errors.append(
+                    "File names are not in the expected format "
+                    f"({FILENAME_FORMAT}): {', '.join(bad)}"
+                )
+                error_fields.add("files")
         if errors:
             for e in errors:
                 flash(e, "error")
@@ -526,7 +565,7 @@ def new_entry():
             return render_template("entry_form.html", **ctx), 400
 
         dest = paths.folder(action)
-        files = save_uploads(uploads, metadata["file_name"], dest)
+        files = save_uploads(uploads, dest)
         store.create_entry(metadata, files, current_user()["username"], action)
         flash(f"Entry saved to {STATUS_LABELS[action]}.", "ok")
         return redirect(url_for("new_entry"))
@@ -564,6 +603,16 @@ def edit_entry(entry_id):
         if not kept and not uploads:
             errors.append("Entry must have at least one file.")
             error_fields.add("files")
+        elif action == "finalized":
+            # Only new uploads are checked — files already on the entry
+            # predate the naming rule.
+            bad = _bad_filenames(uploads)
+            if bad:
+                errors.append(
+                    "File names are not in the expected format "
+                    f"({FILENAME_FORMAT}): {', '.join(bad)}"
+                )
+                error_fields.add("files")
         if errors:
             for e in errors:
                 flash(e, "error")
@@ -576,9 +625,7 @@ def edit_entry(entry_id):
         for name in entry["files"]:
             if name not in kept:
                 (entry_dir / name).unlink(missing_ok=True)
-        new_files = kept + save_uploads(
-            uploads, metadata["file_name"], entry_dir
-        )
+        new_files = kept + save_uploads(uploads, entry_dir)
         store.update_metadata(entry_id, metadata, new_files, u["username"])
 
         if entry["status"] == "inspection":
@@ -730,6 +777,14 @@ def verify_entry(entry_id):
 
     store.change_status(entry_id, "verified", u["username"], verified_by=u["username"])
     flash("Entry verified and moved to 3_Verified.", "ok")
+    dups = csv_export.find_duplicates(entry["metadata"])
+    if dups:
+        flash(
+            f"Possible duplicate: {len(dups)} previously packaged "
+            f"{'entry' if len(dups) == 1 else 'entries'} in master.csv "
+            "share this entry's title, lineage, and source.",
+            "warning",
+        )
     return redirect(url_for("review"))
 
 
@@ -774,6 +829,14 @@ def verify_commit(entry_id, job_id):
     if job["skipped"]:
         flash(f"Already had a text layer (OCR skipped): {', '.join(job['skipped'])}", "ok")
     flash("Entry verified and moved to 3_Verified.", "ok")
+    dups = csv_export.find_duplicates(entry["metadata"])
+    if dups:
+        flash(
+            f"Possible duplicate: {len(dups)} previously packaged "
+            f"{'entry' if len(dups) == 1 else 'entries'} in master.csv "
+            "share this entry's title, lineage, and source.",
+            "warning",
+        )
     return {"ok": True, "redirect": url_for("review")}
 
 

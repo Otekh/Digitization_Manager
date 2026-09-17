@@ -101,6 +101,17 @@ body {
   background: var(--otekh-recessed, #eceae1);
   padding: 1px 7px; border-radius: 8px;
 }
+/* ---- warning flash banner (duplicate alerts etc.) ---- */
+.otekh-banner--warning {
+  background: #fdf3e0; border-color: #d9a441; color: #6b4d12;
+}
+.file-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.file-row .otekh-input { flex: 1; }
+.file-row-remove { padding: 4px 10px; }
+.file-list {
+  list-style: none; margin: 0 0 8px; padding: 0;
+  border: 1px solid var(--otekh-border, #d6d4c9); border-radius: 4px;
+}
 .meta-list {
   list-style: none; margin: 10px 0 8px; padding: 0;
   border: 1px solid var(--otekh-border, #d6d4c9); border-radius: 4px;

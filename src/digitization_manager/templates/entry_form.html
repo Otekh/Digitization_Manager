@@ -11,14 +11,8 @@
       <div class="form-grid">
 
         <div class="otekh-field">
-          <label class="otekh-label" for="title">Document Title{% if 'title' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('title') }}
+          <label class="otekh-label" for="title">Entry Title{% if 'title' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('title') }}
           <input class="otekh-input{{ ' field-error' if 'title' in error_fields }}" id="title" name="title" value="{{ m.get('title', '') }}" required>
-        </div>
-
-        <div class="otekh-field">
-          <label class="otekh-label" for="file_name">File Name{% if 'file_name' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('file_name') }}
-          <input class="otekh-input{{ ' field-error' if 'file_name' in error_fields }}" id="file_name" name="file_name" value="{{ m.get('file_name', '') }}" required>
-          <div class="otekh-help">Saved as this name plus the file's extension (e.g. name.pdf). Extra files get _2, _3.</div>
         </div>
 
         <div class="otekh-field">
@@ -163,8 +157,13 @@
             {% endfor %}
           </ul>
           {% endif %}
-          <input class="otekh-input{{ ' field-error' if 'files' in error_fields }}" id="files" name="files" type="file" multiple {{ 'required' if not entry }}>
-          <div class="otekh-help">{{ 'Add more files, or tick remove to delete existing ones.' if entry else 'One or more files. Uses the system file picker.' }}</div>
+          <div id="file-inputs">
+            <div class="file-row">
+              <input class="otekh-input{{ ' field-error' if 'files' in error_fields }}" id="files" name="files" type="file" multiple {{ 'required' if not entry }}>
+            </div>
+          </div>
+          <button type="button" class="otekh-button" id="file-add">+ Add Another File</button>
+          <div class="otekh-help">{{ 'Add more files, or tick remove to delete existing ones.' if entry else 'Pick several at once, or use + to add them one at a time.' }} Names must be DATE_ACR_title_TYPE.ext (e.g. 20240115_DVT_file-title_CASa.pdf) or start with UNDATE — enforced on Finalize.</div>
         </div>
       </div>
 

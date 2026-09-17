@@ -74,3 +74,46 @@ def write_folder_csv(status: str, entries: list[dict]) -> None:
         writer.writerow(HEADER)
         for e in entries:
             writer.writerow(entry_to_row(e))
+
+
+def append_master(entries: list[dict]) -> None:
+    """Append packaged entries to master.csv — the permanent record of
+    everything ever sent to DSpace (verified rows are purged from the
+    archive after packaging, so this is the only lasting copy). Writes
+    the header row on first use."""
+    if not entries:
+        return
+    master = paths.master_csv()
+    write_header = not master.exists()
+    with master.open("a", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        if write_header:
+            writer.writerow(HEADER)
+        for e in entries:
+            writer.writerow(entry_to_row(e))
+
+
+def find_duplicates(metadata: dict) -> list[dict]:
+    """Master-CSV rows matching this entry on title + lineage + source
+    (case-insensitive). Run when an entry is verified to warn that it
+    may already have been packaged."""
+    master = paths.master_csv()
+    if not master.exists():
+        return []
+    title = metadata.get("title", "").strip().casefold()
+    lineage = metadata.get("lineage", "").strip().casefold()
+    # Master stores the export code, so compare coded vs coded.
+    source = options.code_for(
+        "Collection, Source", metadata.get("collection_source", "")
+    ).strip().casefold()
+    matches = []
+    with master.open("r", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            if (
+                row.get("dc.title", "").strip().casefold() == title
+                and row.get("local.description.lineage", "").strip().casefold()
+                == lineage
+                and row.get("dc.source", "").strip().casefold() == source
+            ):
+                matches.append(row)
+    return matches

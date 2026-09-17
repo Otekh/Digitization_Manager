@@ -45,6 +45,13 @@ def db_file() -> Path:
     return data_root() / "entries.sqlite"
 
 
+def master_csv() -> Path:
+    """Permanent record of every packaged entry (duplicate tracking).
+    Lives at the archive root, not inside a status folder, so it
+    survives the post-package purge of 3_Verified."""
+    return data_root() / "master.csv"
+
+
 def ensure_data_dirs() -> Path:
     """Create the archive root + all four status folders if missing."""
     root = data_root()

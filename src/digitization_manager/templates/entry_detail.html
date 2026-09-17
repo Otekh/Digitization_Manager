@@ -25,7 +25,6 @@
   <div class="otekh-panel__body">
     <table class="otekh-table detail-table">
       <tbody>
-        <tr class="{{ 'flagged-row' if 'file_name' in flagged }}">{{ th('File Name', 'file_name') }}<td>{{ entry.metadata.file_name }}</td>{{ flagcell('file_name') }}</tr>
         <tr class="{{ 'flagged-row' if 'location' in flagged }}">{{ th('Location', 'location') }}<td>{{ entry.metadata.location }}</td>{{ flagcell('location') }}</tr>
         <tr class="{{ 'flagged-row' if 'media_type' in flagged }}">{{ th('Media Type', 'media_type') }}<td>{{ entry.metadata.media_type }}</td>{{ flagcell('media_type') }}</tr>
         <tr class="{{ 'flagged-row' if 'equipment_id' in flagged }}">{{ th('Equipment ID', 'equipment_id') }}<td>{{ entry.metadata.equipment_id }}</td>{{ flagcell('equipment_id') }}</tr>

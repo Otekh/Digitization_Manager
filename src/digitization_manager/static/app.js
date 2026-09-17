@@ -110,6 +110,33 @@
     }
   }
 
+  // ---- file inputs: "+ Add Another File" ----
+  // For users who don't know how to multi-select in the file picker:
+  // each + adds another single-file row (with its own remove button).
+  // All inputs share name="files" so the server sees one combined list.
+  var fileWrap = document.getElementById("file-inputs");
+  var fileAdd = document.getElementById("file-add");
+  if (fileWrap && fileAdd) {
+    fileAdd.addEventListener("click", function () {
+      var row = document.createElement("div");
+      row.className = "file-row";
+      var input = document.createElement("input");
+      input.className = "otekh-input";
+      input.type = "file";
+      input.name = "files";
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "otekh-button otekh-button--danger file-row-remove";
+      rm.title = "Remove";
+      rm.innerHTML = "&#10005;";
+      rm.addEventListener("click", function () { row.remove(); });
+      row.appendChild(input);
+      row.appendChild(rm);
+      fileWrap.appendChild(row);
+      input.click();  // open the picker immediately
+    });
+  }
+
   // ---- date format toggle ----
   var fmt = document.getElementById("date_format");
   var dateInput = document.getElementById("date_value");
