@@ -5,7 +5,6 @@ machines connect to http://<this-machine-ip>:<port> over the wired network.
 """
 import argparse    # CLI flags (--port, --update, --uninstall, ...)
 import errno       # EADDRINUSE check for the port-in-use message
-import socket      # LAN IP detection for the share-address printout
 import subprocess  # running update.sh / uninstall.sh
 import sys         # exit codes + stderr
 import threading   # delayed browser open
@@ -13,18 +12,6 @@ import webbrowser  # opening the app URL on the host machine
 from pathlib import Path
 
 from . import APP_NAME, __version__, paths
-
-
-def _lan_ip() -> str:
-    """Best-effort LAN IP for the 'share this address' message."""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("192.168.1.1", 80))  # no traffic is actually sent
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except OSError:
-        return "127.0.0.1"
 
 
 def _open_browser_later(url: str) -> None:
@@ -102,10 +89,10 @@ def main() -> int:
     # and don't build the Flask app / data dirs unnecessarily.
     from waitress import serve  # production WSGI server (threads, LAN-safe)
 
-    from .app import app
+    from .app import app, lan_ip
 
     root = paths.ensure_data_dirs()
-    lan = _lan_ip()
+    lan = lan_ip()
     print(f"{APP_NAME} {__version__}")
     print(f"Archive folder: {root}")
     print(f"This machine:   http://localhost:{args.port}")

@@ -20,6 +20,39 @@
     });
   }
 
+  // ---- share URL: click to copy ----
+  // navigator.clipboard needs a secure context (https/localhost); plain
+  // http on the LAN isn't one, so fall back to a hidden textarea +
+  // execCommand("copy") which still works there.
+  var shareBtn = document.getElementById("share-url");
+  if (shareBtn) {
+    shareBtn.addEventListener("click", function () {
+      var text = shareBtn.getAttribute("data-url") || shareBtn.textContent.trim();
+      function done() {
+        shareBtn.textContent = "Copied!";
+        shareBtn.classList.add("copied");
+        setTimeout(function () {
+          shareBtn.textContent = text;
+          shareBtn.classList.remove("copied");
+        }, 1200);
+      }
+      function legacyCopy() {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) { /* best effort */ }
+        document.body.removeChild(ta);
+        done();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, legacyCopy);
+      } else {
+        legacyCopy();
+      }
+    });
+  }
+
   // ---- theme -> sub-theme filtering + add/remove rows ----
   // The template embeds {theme: [sub, ...]} as JSON in a script tag so
   // picking a theme can refill its sub-theme dropdown without a request.

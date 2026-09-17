@@ -8,6 +8,7 @@ import json        # SAF package manifests (zip -> entry list)
 import os          # os._exit for the shutdown route
 import re          # date-format validation patterns
 import secrets     # session secret key generation
+import socket      # LAN IP detection for the shareable URL
 import threading   # delayed shutdown so the response reaches the browser
 from datetime import datetime  # date validation + package timestamps
 from pathlib import Path       # upload filenames / entry directories
@@ -114,6 +115,20 @@ def knowledge_holder_required(view):
             abort(403)
         return view(*args, **kwargs)
     return wrapped
+
+
+def lan_ip() -> str:
+    """Best-effort LAN IP of this machine, for the shareable URL shown
+    in the topbar. Opens a UDP socket toward the gateway to learn which
+    local interface would be used — no traffic is actually sent."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.168.1.1", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except OSError:
+        return "127.0.0.1"
 
 
 def _valid_date(fmt: str, value: str) -> bool:
@@ -335,6 +350,9 @@ def inject_globals():
             1 for e in store.list_entries("returned")
             if e["created_by"] == u["username"]
         )
+    # Shareable URL for the topbar: this machine's LAN IP + the port the
+    # request arrived on (SERVER_PORT is set by waitress).
+    share_url = f"http://{lan_ip()}:{request.environ.get('SERVER_PORT', '8000')}"
     return {
         "app_name": APP_NAME,
         "version": __version__,
@@ -343,6 +361,7 @@ def inject_globals():
         "my_returned": my_returned,
         "status_labels": STATUS_LABELS,
         "flag_labels": dict(FLAGGABLE_FIELDS),
+        "share_url": share_url,
     }
 
 
