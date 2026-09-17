@@ -156,6 +156,21 @@ sed -i.bak "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$BIN_DIR/digitization_manager"
 rm -f "$BIN_DIR/digitization_manager.bak"
 chmod +x "$BIN_DIR/digitization_manager"
 
+# --- make sure BIN_DIR is on PATH ---
+# ~/.local/bin isn't in the default PATH on macOS (or minimal Linux
+# setups); append it to the user's shell profile so the command works
+# in new terminals.
+case ":$PATH:" in
+  *":$BIN_DIR:"*) ;;  # already on PATH
+  *)
+    if [[ "$OS" == "Darwin" ]]; then PROFILE="$HOME/.zshrc"; else PROFILE="$HOME/.profile"; fi
+    if ! grep -qsF "$BIN_DIR" "$PROFILE" 2>/dev/null; then
+      echo "export PATH=\"$BIN_DIR:\$PATH\"" >> "$PROFILE"
+      echo "Added $BIN_DIR to PATH in $PROFILE (open a new terminal to use it)."
+    fi
+    ;;
+esac
+
 # --- recovery admin password ---
 # The hidden 'admin' account's password lives in the data root, never in
 # the repo. Prompt for it on first install; skip if already set or if
