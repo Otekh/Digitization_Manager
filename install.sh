@@ -247,11 +247,20 @@ elif [[ "$OS" == "Darwin" ]]; then
 EOF
   cat > "$APP_PATH/Contents/MacOS/launcher" <<EOF
 #!/usr/bin/env bash
-set -e
 # Brew's keg-only openjdk isn't on PATH; include its bin dir directly
 # (Apple Silicon + Intel prefixes) so SAFBuilder can always find java.
 export PATH="\$HOME/.local/bin:\$HOME/.cargo/bin:/opt/homebrew/opt/openjdk/bin:/usr/local/opt/openjdk/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\$PATH"
-exec "$INSTALL_DIR/.venv/bin/python" -m digitization_manager.main
+# Server already up? Just reopen the browser and exit — dock clicks
+# stay instant and we never boot a second python.
+if curl -sf -m 1 -o /dev/null "http://127.0.0.1:8000/login"; then
+  open "http://localhost:8000"
+  exit 0
+fi
+# Run detached so this launcher exits immediately: the icon is a
+# launcher, not the server, so every click either starts the server
+# or — via main.py's port-in-use check — reopens the browser.
+mkdir -p "\$HOME/.digitization_manager"
+nohup "$INSTALL_DIR/.venv/bin/python" -m digitization_manager.main >>"\$HOME/.digitization_manager/server.log" 2>&1 &
 EOF
   chmod +x "$APP_PATH/Contents/MacOS/launcher"
   # Build .icns from the PNG if macOS tools exist.
