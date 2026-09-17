@@ -13,6 +13,30 @@ fi
 
 OS="$(uname -s)"
 
+# --- macOS: install Homebrew if missing ---
+# Needed for tesseract/ghostscript/openjdk (and uv below). The official
+# installer also handles Xcode Command Line Tools. It needs sudo, so it
+# only runs interactively.
+if [[ "$OS" == "Darwin" ]] && ! command -v brew >/dev/null 2>&1; then
+  echo "Homebrew not found - installing it now..."
+  if [[ ! -t 0 ]]; then
+    echo "Homebrew is required on macOS but this installer has no terminal." >&2
+    echo "Install it from https://brew.sh then re-run this script." >&2
+    exit 1
+  fi
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Put brew on PATH for the rest of this script (Apple Silicon vs Intel).
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "Homebrew installation failed. See https://brew.sh" >&2
+    exit 1
+  fi
+fi
+
 # --- install uv if missing (needed to build the Python environment) ---
 if ! command -v uv >/dev/null 2>&1; then
   echo "uv not found - installing it now..."
