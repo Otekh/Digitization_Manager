@@ -172,6 +172,7 @@ def create_entry(metadata: dict, files: list[str], username: str, status: str) -
             ),
         )
     _regen_csvs(status)
+    csv_export.append_master([entry])  # permanent record, saf=no
     return entry
 
 
@@ -186,6 +187,7 @@ def update_metadata(entry_id: str, metadata: dict, files: list[str], by: str) ->
     # 'returned' entries have no CSV row; their files sit in 1_Finalized, so
     # regenerate that folder's CSV (the entry simply won't appear in it).
     _regen_csvs("finalized" if entry["status"] == "returned" else entry["status"])
+    csv_export.update_master_row(entry)  # keep the master record in sync
 
 
 def _move_files(entry: dict, from_status: str, to_status: str) -> None:

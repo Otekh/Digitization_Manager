@@ -55,6 +55,7 @@
     <a class="otekh-tab {{ 'active' if request.endpoint == 'verified_entries' }}" href="{{ url_for('verified_entries') }}">View Verified Entries</a>
     <a class="otekh-tab {{ 'active' if request.endpoint == 'prepare' }}" href="{{ url_for('prepare') }}">Prepare for DSpace</a>
     <a class="otekh-tab {{ 'active' if request.endpoint == 'saf_packages' }}" href="{{ url_for('saf_packages') }}">SAF DSpace Folder</a>
+    <a class="otekh-tab {{ 'active' if request.endpoint in ('master_csv_view', 'master_edit') }}" href="{{ url_for('master_csv_view') }}">View Master CSV</a>
     {% endif %}
   </nav>
   {% endif %}

@@ -101,9 +101,10 @@ def run_safbuilder(dest_dir: Path | None = None) -> Path:
     shutil.move(str(zip_path), str(dest))
     shutil.rmtree(src / out_name, ignore_errors=True)  # unzipped SAF dir
 
-    # Master CSV: permanent record of everything packaged. The verified
-    # rows are purged right after this returns, so append now.
-    csv_export.append_master(verified)
+    # Master CSV: flip these entries' rows to saf=yes. The verified
+    # rows are purged right after this returns; master.csv is the
+    # lasting record that they were packaged.
+    csv_export.mark_packaged(verified)
 
     # Manifest beside the zip: lets the SAF DSpace Folder tab list which
     # entries are inside each package.

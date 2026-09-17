@@ -777,12 +777,14 @@ def verify_entry(entry_id):
 
     store.change_status(entry_id, "verified", u["username"], verified_by=u["username"])
     flash("Entry verified and moved to 3_Verified.", "ok")
-    dups = csv_export.find_duplicates(entry["metadata"])
+    dups = csv_export.find_duplicates(entry["metadata"], exclude_id=entry_id)
     if dups:
+        packaged = sum(1 for d in dups if d.get("saf") == "yes")
         flash(
-            f"Possible duplicate: {len(dups)} previously packaged "
+            f"Possible duplicate: {len(dups)} other "
             f"{'entry' if len(dups) == 1 else 'entries'} in master.csv "
-            "share this entry's title, lineage, and source.",
+            f"share this entry's title, lineage, and source "
+            f"({packaged} already packaged for DSpace).",
             "warning",
         )
     return redirect(url_for("review"))
@@ -829,12 +831,14 @@ def verify_commit(entry_id, job_id):
     if job["skipped"]:
         flash(f"Already had a text layer (OCR skipped): {', '.join(job['skipped'])}", "ok")
     flash("Entry verified and moved to 3_Verified.", "ok")
-    dups = csv_export.find_duplicates(entry["metadata"])
+    dups = csv_export.find_duplicates(entry["metadata"], exclude_id=entry_id)
     if dups:
+        packaged = sum(1 for d in dups if d.get("saf") == "yes")
         flash(
-            f"Possible duplicate: {len(dups)} previously packaged "
+            f"Possible duplicate: {len(dups)} other "
             f"{'entry' if len(dups) == 1 else 'entries'} in master.csv "
-            "share this entry's title, lineage, and source.",
+            f"share this entry's title, lineage, and source "
+            f"({packaged} already packaged for DSpace).",
             "warning",
         )
     return {"ok": True, "redirect": url_for("review")}
@@ -908,6 +912,45 @@ def prepare():
     return render_template(
         "prepare.html", entries=entries, packages=packages
     )
+
+
+# ------------------------------------------------------------- master csv
+
+@app.route("/master")
+@admin_required
+def master_csv_view():
+    """View Master CSV tab (admin): the permanent record of every entry
+    ever created, with a saf column marking what's been packaged."""
+    header, rows = csv_export.read_master()
+    return render_template("master.html", header=header, rows=rows)
+
+
+@app.route("/master/<int:index>/edit", methods=["GET", "POST"])
+@admin_required
+def master_edit(index):
+    """Edit one master.csv row (raw cells — the file is the record)."""
+    header, rows = csv_export.read_master()
+    if not 0 <= index < len(rows):
+        abort(404)
+    if request.method == "POST":
+        values = [request.form.get(f"c{i}", "") for i in range(len(header))]
+        csv_export.update_master_cells(index, values)
+        flash("Master CSV row updated.", "ok")
+        return redirect(url_for("master_csv_view"))
+    return render_template(
+        "master_edit.html", header=header, row=rows[index], index=index
+    )
+
+
+@app.route("/master/<int:index>/delete", methods=["POST"])
+@admin_required
+def master_delete(index):
+    """Delete one master.csv row."""
+    if csv_export.delete_master_row(index):
+        flash("Master CSV row deleted.", "ok")
+    else:
+        abort(404)
+    return redirect(url_for("master_csv_view"))
 
 
 # --------------------------------------------------------- saf dspace folder

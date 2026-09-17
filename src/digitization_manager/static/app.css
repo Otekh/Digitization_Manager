@@ -105,6 +105,10 @@ body {
 .otekh-banner--warning {
   background: #fdf3e0; border-color: #d9a441; color: #6b4d12;
 }
+/* ---- master CSV table: wide, scrolls horizontally, cells truncate ---- */
+.master-scroll { overflow-x: auto; }
+.master-table { white-space: nowrap; }
+.master-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .file-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 .file-row .otekh-input { flex: 1; }
 .file-row-remove { padding: 4px 10px; }

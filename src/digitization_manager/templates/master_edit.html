@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Edit Master Row - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">Edit Master Row {{ index + 1 }}</div>
+  <div class="otekh-panel__body">
+    <p class="otekh-help">Raw master.csv cells — edit carefully, this file is
+    the permanent record. <code>saf</code> should be yes or no.</p>
+    <form method="post">
+      <div class="form-grid">
+        {% for h in header %}
+        <div class="otekh-field">
+          <label class="otekh-label" for="c{{ loop.index0 }}">{{ h }}</label>
+          {% if h == 'saf' %}
+          <select class="otekh-select" id="c{{ loop.index0 }}" name="c{{ loop.index0 }}">
+            <option value="no" {{ 'selected' if row[loop.index0] != 'yes' }}>no</option>
+            <option value="yes" {{ 'selected' if row[loop.index0] == 'yes' }}>yes</option>
+          </select>
+          {% else %}
+          <input class="otekh-input" id="c{{ loop.index0 }}" name="c{{ loop.index0 }}" value="{{ row[loop.index0] }}">
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="otekh-button otekh-button--primary" type="submit">Save Row</button>
+        <a class="otekh-button" href="{{ url_for('master_csv_view') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
