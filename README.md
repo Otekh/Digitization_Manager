@@ -37,8 +37,9 @@ dropdowns export their codes (e.g. `BK`), subjects export as
 
 - **Levels**: `user` and `admin`. **Types**: `Lab Member` and
   `Knowledge Holder` (Knowledge Holders can see Folder 2 entries).
-- A hidden permanent admin exists for recovery: username `admin`,
-  password `Otekh@15243`. It cannot be edited or deleted.
+- A hidden permanent admin exists for recovery: username `admin`
+  (recovery password is set in `src/digitization_manager/auth.py`).
+  It cannot be edited or deleted.
 - Admins add/delete users and reset passwords under **User Settings**.
   Users change their own username/password under **Profile Settings**.
 
