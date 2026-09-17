@@ -27,14 +27,31 @@ def _package_id() -> str:
     return "".join(chars)
 
 
+def _java_bin() -> str:
+    """Locate a real java binary.
+
+    macOS ships a /usr/bin/java stub that passes shutil.which but errors
+    at runtime when no JDK is installed, and brew's openjdk is keg-only
+    (not on PATH) — so check the brew opt dirs first, then PATH.
+    """
+    candidates = [
+        "/opt/homebrew/opt/openjdk/bin/java",  # brew, Apple Silicon
+        "/usr/local/opt/openjdk/bin/java",     # brew, Intel
+        shutil.which("java") or "",
+    ]
+    for c in candidates:
+        if c and Path(c).exists():
+            return c
+    raise RuntimeError("java is not installed on the server.")
+
+
 def run_safbuilder(dest_dir: Path | None = None) -> Path:
     """Build a SAF zip from 3_Verified into dest_dir (default: Folder 4).
     Returns the zip path."""
     jar = paths.safbuilder_jar()
     if not jar.exists():
         raise FileNotFoundError(f"SAFBuilder jar not found at {jar}")
-    if not shutil.which("java"):
-        raise RuntimeError("java is not installed on the server.")
+    java = _java_bin()
 
     src = paths.folder("verified")
     csv_path = src / "data.csv"
@@ -48,7 +65,7 @@ def run_safbuilder(dest_dir: Path | None = None) -> Path:
     out_name = f"{_package_id()}_saf_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     result = subprocess.run(
         [
-            "java",
+            java,
             "-cp",
             str(jar),
             "safbuilder.BatchProcess",

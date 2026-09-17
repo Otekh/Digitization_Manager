@@ -57,7 +57,10 @@ fi
 missing_pkgs=()
 command -v tesseract >/dev/null 2>&1 || missing_pkgs+=("tesseract")
 { command -v gs >/dev/null 2>&1 || command -v ghostscript >/dev/null 2>&1; } || missing_pkgs+=("ghostscript")
-command -v java >/dev/null 2>&1 || missing_pkgs+=("java")
+# macOS ships a /usr/bin/java STUB that passes 'command -v' but errors
+# with "Unable to locate a Java Runtime" when no JDK is installed — so
+# probe with -version (the stub exits non-zero) instead of just which.
+java -version >/dev/null 2>&1 || missing_pkgs+=("java")
 
 if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
   echo "Missing packages: ${missing_pkgs[*]}"
@@ -93,9 +96,15 @@ if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
       exit 1
     fi
     brew install "${brew_pkgs[@]}"
-    # openjdk is keg-only; link it so 'java' is on PATH.
+    # openjdk is keg-only: brew won't put it on PATH. The proper fix is
+    # linking the .jdk bundle into /Library/Java/JavaVirtualMachines so
+    # the system /usr/bin/java wrapper finds it (needs sudo). The app
+    # also checks brew's opt dir directly, so this is belt-and-suspenders.
     if [[ " ${brew_pkgs[*]} " =~ " openjdk " ]]; then
-      brew link --force openjdk 2>/dev/null || true
+      JDK="$(brew --prefix openjdk 2>/dev/null)/libexec/openjdk.jdk"
+      if [[ -d "$JDK" && -t 0 ]]; then
+        sudo ln -sfn "$JDK" /Library/Java/JavaVirtualMachines/openjdk.jdk || true
+      fi
     fi
   fi
 fi
@@ -224,7 +233,9 @@ EOF
   cat > "$APP_PATH/Contents/MacOS/launcher" <<EOF
 #!/usr/bin/env bash
 set -e
-export PATH="\$HOME/.local/bin:\$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\$PATH"
+# Brew's keg-only openjdk isn't on PATH; include its bin dir directly
+# (Apple Silicon + Intel prefixes) so SAFBuilder can always find java.
+export PATH="\$HOME/.local/bin:\$HOME/.cargo/bin:/opt/homebrew/opt/openjdk/bin:/usr/local/opt/openjdk/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\$PATH"
 exec "$INSTALL_DIR/.venv/bin/python" -m digitization_manager.main
 EOF
   chmod +x "$APP_PATH/Contents/MacOS/launcher"
