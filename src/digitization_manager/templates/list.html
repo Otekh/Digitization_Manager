@@ -13,7 +13,7 @@
           <th>Type</th>
           <th>Submitted by</th>
           <th>Date</th>
-          {% if mode == 'review' %}<th></th>{% endif %}
+          {% if mode in ('review', 'verified') %}<th></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -34,6 +34,8 @@
           <td>{{ e.created_at[:10] }}</td>
           {% if mode == 'review' %}
           <td><a class="otekh-button" href="{{ url_for('entry_detail', entry_id=e.id) }}">Review</a></td>
+          {% elif mode == 'verified' %}
+          <td><a class="otekh-button" href="{{ url_for('entry_detail', entry_id=e.id) }}">View</a></td>
           {% endif %}
         </tr>
         {% endfor %}

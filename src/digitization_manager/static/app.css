@@ -168,3 +168,38 @@ textarea.otekh-input { resize: vertical; font-family: inherit; }
 .add-user-form .otekh-input { width: 180px; }
 .otekh-banner { margin-bottom: 14px; }
 code { font-size: 12px; background: var(--otekh-recessed, #eceae1); padding: 1px 5px; border-radius: 3px; }
+
+/* ---- OCR progress modal ---- */
+.ocr-modal {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, .45);
+  display: flex; align-items: center; justify-content: center;
+}
+.ocr-modal[hidden] { display: none; }
+.ocr-modal__box {
+  background: var(--otekh-panel, #fff);
+  border: 1px solid var(--otekh-border, #d6d4c9);
+  border-radius: 10px; padding: 22px 26px;
+  width: 400px; max-width: 90vw;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+}
+.ocr-modal__title { margin: 0 0 8px; }
+.ocr-modal__msg {
+  margin: 0 0 14px; font-size: 13px;
+  color: var(--otekh-muted, #6d6c62); word-break: break-all;
+}
+.ocr-bar {
+  height: 10px; border-radius: 5px; overflow: hidden;
+  background: var(--otekh-recessed, #eceae1); margin-bottom: 14px;
+}
+.ocr-bar__fill {
+  height: 100%; width: 0;
+  background: var(--otekh-ok, #6f8f4e); transition: width .3s;
+}
+.ocr-bar.indeterminate .ocr-bar__fill {
+  width: 40% !important; animation: ocr-slide 1.1s ease-in-out infinite;
+}
+@keyframes ocr-slide {
+  0% { margin-left: -40%; }
+  100% { margin-left: 100%; }
+}

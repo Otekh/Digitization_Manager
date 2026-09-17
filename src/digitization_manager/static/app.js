@@ -141,4 +141,81 @@
     summary.addEventListener("input", syncCount);
     syncCount();
   }
+
+  // ---- verify: async OCR with progress modal ----
+  var vform = document.getElementById("verify-form");
+  var ocrModal = document.getElementById("ocr-modal");
+  if (vform && ocrModal) {
+    var ocrTitle = document.getElementById("ocr-title");
+    var ocrMsg = document.getElementById("ocr-msg");
+    var ocrBar = document.getElementById("ocr-bar");
+    var ocrFill = document.getElementById("ocr-fill");
+    var ocrOk = document.getElementById("ocr-ok");
+    var commitUrl = vform.getAttribute("data-commit");
+    var jobId = null;
+
+    function ocrShow(title, msg) {
+      ocrTitle.textContent = title;
+      ocrMsg.textContent = msg || "";
+      ocrModal.hidden = false;
+    }
+    function ocrFail(msg) {
+      ocrShow("OCR Failed", msg);
+      ocrBar.hidden = true;
+      ocrOk.hidden = false;
+      ocrOk.onclick = function () { window.location.reload(); };
+    }
+    function ocrCommit() {
+      fetch(commitUrl.replace("JOBID", jobId), { method: "POST" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { window.location = d.redirect || "/review"; })
+        .catch(function () { window.location.reload(); });
+    }
+    function ocrPoll() {
+      fetch("/ocr_status/" + jobId)
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (j.status === "running") {
+            ocrShow(
+              "OCR Running",
+              j.total
+                ? "File " + j.index + " of " + j.total +
+                    (j.current ? ": " + j.current : "")
+                : "Checking files…"
+            );
+            if (j.pct != null) {
+              ocrBar.classList.remove("indeterminate");
+              ocrFill.style.width = j.pct + "%";
+            } else {
+              ocrBar.classList.add("indeterminate");
+              ocrFill.style.width = "";
+            }
+            setTimeout(ocrPoll, 600);
+          } else if (j.status === "done") {
+            ocrCommit();
+          } else if (j.status === "skipped") {
+            ocrShow("OCR Skipped", "All PDFs already have a text layer.");
+            ocrBar.hidden = true;
+            ocrOk.hidden = false;
+            ocrOk.onclick = ocrCommit;
+          } else {
+            ocrFail(j.error || "Unknown error.");
+          }
+        })
+        .catch(function () { setTimeout(ocrPoll, 1200); });
+    }
+    vform.addEventListener("submit", function (e) {
+      e.preventDefault();
+      ocrShow("OCR Running", "Starting…");
+      ocrBar.hidden = false;
+      fetch(vform.getAttribute("data-start"), { method: "POST" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) { ocrFail(d.error); return; }
+          jobId = d.job_id;
+          ocrPoll();
+        })
+        .catch(function () { vform.submit(); }); // no-JS/network fallback: sync POST
+    });
+  }
 })();

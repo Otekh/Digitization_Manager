@@ -68,13 +68,17 @@
       {% endif %}
 
       {# Admin actions on reviewable entries #}
-      {% if user.level == 'admin' and entry.status in ('finalized', 'inspection') %}
-        {% if entry.created_by != user.username %}
-        <form method="post" action="{{ url_for('verify_entry', entry_id=entry.id) }}" class="inline-form">
+      {% if user.level == 'admin' and entry.status in ('finalized', 'inspection', 'verified') %}
+        {% if entry.status in ('finalized', 'inspection') %}
+          {% if entry.created_by != user.username %}
+        <form method="post" action="{{ url_for('verify_entry', entry_id=entry.id) }}" class="inline-form" id="verify-form"
+              data-start="{{ url_for('verify_start', entry_id=entry.id) }}"
+              data-commit="{{ url_for('verify_commit', entry_id=entry.id, job_id='JOBID') }}">
           <button class="otekh-button otekh-button--primary" type="submit">Verify</button>
         </form>
-        {% else %}
+          {% else %}
         <span class="otekh-help">Your own entry — another admin must verify it.</span>
+          {% endif %}
         {% endif %}
         {% if entry.status == 'finalized' %}
         <form method="post" action="{{ url_for('inspect_move', entry_id=entry.id) }}" class="inline-form">
@@ -88,6 +92,17 @@
         </form>
         {% if can_flag %}<span class="otekh-help">Click a field's &#128681; button to flag it for fixing, then Return to User.</span>{% endif %}
       {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="ocr-modal" id="ocr-modal" hidden>
+  <div class="ocr-modal__box">
+    <h3 class="ocr-modal__title" id="ocr-title">OCR Running</h3>
+    <p class="ocr-modal__msg" id="ocr-msg"></p>
+    <div class="ocr-bar" id="ocr-bar"><div class="ocr-bar__fill" id="ocr-fill"></div></div>
+    <div class="form-actions">
+      <button class="otekh-button otekh-button--primary" id="ocr-ok" type="button" hidden>OK</button>
     </div>
   </div>
 </div>

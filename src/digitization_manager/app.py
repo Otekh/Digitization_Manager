@@ -480,6 +480,15 @@ def inspect():
     )
 
 
+@app.route("/verified")
+@admin_required
+def verified_entries():
+    entries = store.list_entries("verified")
+    return render_template(
+        "list.html", title="View Verified Entries", entries=entries, mode="verified"
+    )
+
+
 @app.route("/entry/<entry_id>")
 @login_required
 def entry_detail(entry_id):
@@ -498,7 +507,7 @@ def entry_detail(entry_id):
         # Admins flag fields on the detail page before returning.
         can_flag=(
             u["level"] == "admin"
-            and entry["status"] in ("finalized", "inspection")
+            and entry["status"] in ("finalized", "inspection", "verified")
         ),
     )
 
@@ -547,6 +556,48 @@ def verify_entry(entry_id):
     return redirect(url_for("review"))
 
 
+@app.route("/entry/<entry_id>/verify_start", methods=["POST"])
+@admin_required
+def verify_start(entry_id):
+    """Start a background OCR job; the detail page polls ocr_status."""
+    u = current_user()
+    entry = store.get_entry(entry_id)
+    if not entry or entry["status"] not in ("finalized", "inspection"):
+        abort(404)
+    if entry["created_by"] == u["username"]:
+        return {"error": "You cannot verify your own entry. Another admin must do it."}, 403
+    return {"job_id": ocr.start_ocr_job(entry_id, u["username"])}
+
+
+@app.route("/ocr_status/<job_id>")
+@admin_required
+def ocr_status(job_id):
+    job = ocr.get_job(job_id)
+    if not job:
+        abort(404)
+    return job
+
+
+@app.route("/entry/<entry_id>/verify_commit/<job_id>", methods=["POST"])
+@admin_required
+def verify_commit(entry_id, job_id):
+    """Finish verification after the OCR job completes (or was skipped)."""
+    u = current_user()
+    job = ocr.get_job(job_id)
+    if not job or job["entry_id"] != entry_id or job["status"] not in ("done", "skipped"):
+        abort(400)
+    entry = store.get_entry(entry_id)
+    if not entry or entry["status"] not in ("finalized", "inspection"):
+        abort(404)
+    store.change_status(entry_id, "verified", u["username"], verified_by=u["username"])
+    if job["ocred"]:
+        flash(f"OCR complete: {', '.join(job['ocred'])}", "ok")
+    if job["skipped"]:
+        flash(f"Already had a text layer (OCR skipped): {', '.join(job['skipped'])}", "ok")
+    flash("Entry verified and moved to 3_Verified.", "ok")
+    return {"ok": True, "redirect": url_for("review")}
+
+
 @app.route("/entry/<entry_id>/inspect_move", methods=["POST"])
 @admin_required
 def inspect_move(entry_id):
@@ -565,15 +616,16 @@ def inspect_move(entry_id):
 @admin_required
 def return_entry(entry_id):
     entry = store.get_entry(entry_id)
-    if not entry or entry["status"] not in ("finalized", "inspection"):
+    if not entry or entry["status"] not in ("finalized", "inspection", "verified"):
         abort(404)
+    was_verified = entry["status"] == "verified"
     flags = _collect_flags(request.form)
     store.change_status(
         entry_id, "returned", current_user()["username"],
         note=request.form.get("note", ""), flags=flags,
     )
     flash("Entry returned to its creator.", "ok")
-    return redirect(url_for("review"))
+    return redirect(url_for("verified_entries") if was_verified else url_for("review"))
 
 
 # -------------------------------------------------------- prepare for dspace
