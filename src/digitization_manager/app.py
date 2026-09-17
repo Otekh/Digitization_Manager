@@ -5,8 +5,10 @@ with a browser. All state lives under the data root (see paths.py).
 """
 import functools
 import json
+import os
 import re
 import secrets
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -688,6 +690,26 @@ def saf_packages():
     return render_template("saf_packages.html", packages=_list_packages())
 
 
+@app.route("/shutdown", methods=["POST"])
+@admin_required
+def shutdown():
+    """Stop the server. Needed when launched from the app icon, where
+    there's no terminal to Ctrl+C. Delayed slightly so this response
+    reaches the browser first."""
+    threading.Timer(0.5, os._exit, args=(0,)).start()
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<title>Shut down</title></head>"
+        "<body style='font-family:sans-serif;background:#f4f3ee;display:flex;"
+        "justify-content:center;padding-top:80px'>"
+        "<div style='background:#fff;border:1px solid #d6d4c9;border-radius:8px;"
+        "padding:24px 32px;text-align:center'>"
+        "<h2 style='margin-top:0'>Digitization Manager stopped</h2>"
+        "<p>The server has shut down. You can close this tab.</p>"
+        "</div></body></html>"
+    )
+
+
 @app.route("/saf-packages/download/<path:name>")
 @admin_required
 def saf_package_download(name):
@@ -716,6 +738,134 @@ def saf_package_delete():
         manifest.unlink()
     flash(f"Deleted {name}.", "ok")
     return redirect(url_for("saf_packages"))
+
+
+# ------------------------------------------------------- metadata settings
+
+@app.route("/metadata-settings")
+@admin_required
+def metadata_settings():
+    opts = options.load_options()
+    return render_template(
+        "metadata_settings.html",
+        fields=opts["fields"],
+        coded=options.CODED_COLUMNS,
+        code_lengths={f: options.code_length(f) for f in opts["fields"]},
+        themes=opts["themes"],
+        subthemes=opts["subthemes"],
+    )
+
+
+def _meta_edit(fn, *args, ok: str):
+    """Run an options.py edit, flash the result, redirect back."""
+    try:
+        fn(*args)
+        flash(ok, "ok")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("metadata_settings"))
+
+
+@app.route("/metadata-settings/option/add", methods=["POST"])
+@admin_required
+def metadata_option_add():
+    field = request.form.get("field", "")
+    label = request.form.get("label", "")
+    code = request.form.get("code", "")
+    return _meta_edit(
+        options.add_option, field, label, code,
+        ok=f'Added "{label}" to {field}.',
+    )
+
+
+@app.route("/metadata-settings/option/edit", methods=["POST"])
+@admin_required
+def metadata_option_edit():
+    field = request.form.get("field", "")
+    old = request.form.get("old_label", "")
+    label = request.form.get("label", "")
+    code = request.form.get("code", "")
+    return _meta_edit(
+        options.edit_option, field, old, label, code,
+        ok=f'Updated "{old}" in {field}.',
+    )
+
+
+@app.route("/metadata-settings/option/delete", methods=["POST"])
+@admin_required
+def metadata_option_delete():
+    field = request.form.get("field", "")
+    label = request.form.get("label", "")
+    return _meta_edit(
+        options.delete_option, field, label,
+        ok=f'Removed "{label}" from {field}.',
+    )
+
+
+@app.route("/metadata-settings/theme/add", methods=["POST"])
+@admin_required
+def metadata_theme_add():
+    theme = request.form.get("theme", "")
+    subs = request.form.get("subthemes", "").splitlines()
+    return _meta_edit(
+        options.add_theme, theme, subs,
+        ok=f'Added theme "{theme}".',
+    )
+
+
+@app.route("/metadata-settings/theme/edit", methods=["POST"])
+@admin_required
+def metadata_theme_edit():
+    old = request.form.get("old_theme", "")
+    theme = request.form.get("theme", "")
+    return _meta_edit(
+        options.edit_theme, old, theme,
+        ok=f'Renamed theme "{old}" to "{theme}".',
+    )
+
+
+@app.route("/metadata-settings/theme/delete", methods=["POST"])
+@admin_required
+def metadata_theme_delete():
+    theme = request.form.get("theme", "")
+    return _meta_edit(
+        options.delete_theme, theme,
+        ok=f'Removed theme "{theme}" and its sub-themes.',
+    )
+
+
+@app.route("/metadata-settings/subtheme/add", methods=["POST"])
+@admin_required
+def metadata_subtheme_add():
+    theme = request.form.get("theme", "")
+    label = request.form.get("label", "")
+    return _meta_edit(
+        options.add_subtheme, theme, label,
+        ok=f'Added "{label}" to {theme}.',
+    )
+
+
+@app.route("/metadata-settings/subtheme/edit", methods=["POST"])
+@admin_required
+def metadata_subtheme_edit():
+    theme = request.form.get("theme", "")
+    old = request.form.get("old_label", "")
+    label = request.form.get("label", "")
+    return _meta_edit(
+        options.edit_subtheme, theme, old, label,
+        ok=f'Updated "{old}" in {theme}.',
+    )
+
+
+@app.route("/metadata-settings/subtheme/delete", methods=["POST"])
+@admin_required
+def metadata_subtheme_delete():
+    theme = request.form.get("theme", "")
+    label = request.form.get("label", "")
+    return _meta_edit(
+        options.delete_subtheme, theme, label,
+        ok=f'Removed "{label}" from {theme}.',
+    )
 
 
 # ------------------------------------------------------------------ account

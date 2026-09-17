@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Metadata Settings - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">Metadata Settings</div>
+  <div class="otekh-panel__body">
+    <p class="otekh-help">
+      Click a dropdown to expand it. Changes apply immediately.
+      Coded fields (like Media Type) need a code matching the existing length.
+    </p>
+
+    {% for name, opts in fields.items() %}
+    <details class="meta-section">
+      <summary>{{ name }} <span class="meta-count">{{ opts | length }}</span></summary>
+      <ul class="meta-list">
+        {% for o in opts %}
+        <li>
+          <details class="meta-edit">
+            <summary>
+              <span class="meta-label">{{ o.label }}
+                {%- if name in coded %} <code class="meta-code">{{ o.code }}</code>{% endif %}
+              </span>
+              <span class="meta-edit-hint">edit</span>
+            </summary>
+            <form method="post" action="{{ url_for('metadata_option_edit') }}" class="inline-form meta-edit-form">
+              <input type="hidden" name="field" value="{{ name }}">
+              <input type="hidden" name="old_label" value="{{ o.label }}">
+              {% if name in coded %}
+              <input class="otekh-input meta-code-input" name="code" required
+                     value="{{ o.code }}"
+                     {% if code_lengths[name] %}maxlength="{{ code_lengths[name] }}"{% endif %}>
+              {% endif %}
+              <input class="otekh-input" name="label" value="{{ o.label }}" required>
+              <button class="otekh-button" type="submit">Save</button>
+            </form>
+          </details>
+          <form method="post" action="{{ url_for('metadata_option_delete') }}" class="inline-form"
+                onsubmit="return confirm('Remove &quot;{{ o.label }}&quot; from {{ name }}?');">
+            <input type="hidden" name="field" value="{{ name }}">
+            <input type="hidden" name="label" value="{{ o.label }}">
+            <button class="otekh-button otekh-button--danger" type="submit">Delete</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('metadata_option_add') }}" class="inline-form meta-add">
+        <input type="hidden" name="field" value="{{ name }}">
+        {% if name in coded %}
+        <input class="otekh-input meta-code-input" name="code" required
+               placeholder="code ({{ code_lengths[name] }} chars)"
+               {% if code_lengths[name] %}maxlength="{{ code_lengths[name] }}"{% endif %}>
+        {% endif %}
+        <input class="otekh-input" name="label" placeholder="new option" required>
+        <button class="otekh-button otekh-button--primary" type="submit">Add</button>
+      </form>
+    </details>
+    {% endfor %}
+
+    <details class="meta-section">
+      <summary>Themes &amp; Sub-themes <span class="meta-count">{{ themes | length }}</span></summary>
+      {% for theme in themes %}
+      <details class="meta-theme">
+        <summary>{{ theme }} <span class="meta-count">{{ subthemes[theme] | length }}</span></summary>
+        <div class="meta-theme__tools">
+          <form method="post" action="{{ url_for('metadata_theme_edit') }}" class="inline-form">
+            <input type="hidden" name="old_theme" value="{{ theme }}">
+            <input class="otekh-input" name="theme" value="{{ theme }}" required>
+            <button class="otekh-button" type="submit">Rename</button>
+          </form>
+          <form method="post" action="{{ url_for('metadata_theme_delete') }}" class="inline-form"
+                onsubmit="return confirm('Remove theme &quot;{{ theme }}&quot; and all its sub-themes?');">
+            <input type="hidden" name="theme" value="{{ theme }}">
+            <button class="otekh-button otekh-button--danger" type="submit">Delete Theme</button>
+          </form>
+        </div>
+        <ul class="meta-list">
+          {% for s in subthemes[theme] %}
+          <li>
+            <details class="meta-edit">
+              <summary>
+                <span class="meta-label">{{ s }}</span>
+                <span class="meta-edit-hint">edit</span>
+              </summary>
+              <form method="post" action="{{ url_for('metadata_subtheme_edit') }}" class="inline-form meta-edit-form">
+                <input type="hidden" name="theme" value="{{ theme }}">
+                <input type="hidden" name="old_label" value="{{ s }}">
+                <input class="otekh-input" name="label" value="{{ s }}" required>
+                <button class="otekh-button" type="submit">Save</button>
+              </form>
+            </details>
+            <form method="post" action="{{ url_for('metadata_subtheme_delete') }}" class="inline-form"
+                  onsubmit="return confirm('Remove &quot;{{ s }}&quot; from {{ theme }}?');">
+              <input type="hidden" name="theme" value="{{ theme }}">
+              <input type="hidden" name="label" value="{{ s }}">
+              <button class="otekh-button otekh-button--danger" type="submit">Delete</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        <form method="post" action="{{ url_for('metadata_subtheme_add') }}" class="inline-form meta-add">
+          <input type="hidden" name="theme" value="{{ theme }}">
+          <input class="otekh-input" name="label" placeholder="new sub-theme" required>
+          <button class="otekh-button" type="submit">Add Sub-theme</button>
+        </form>
+      </details>
+      {% endfor %}
+
+      <h3 class="section-head">Add Theme</h3>
+      <form method="post" action="{{ url_for('metadata_theme_add') }}" class="meta-add-theme">
+        <input class="otekh-input" name="theme" placeholder="theme name" required>
+        <textarea class="otekh-input" name="subthemes" rows="4" required
+                  placeholder="sub-themes, one per line"></textarea>
+        <button class="otekh-button otekh-button--primary" type="submit">Add Theme</button>
+      </form>
+      <p class="otekh-help">A new theme needs at least one sub-theme.</p>
+    </details>
+  </div>
+</div>
+{% endblock %}

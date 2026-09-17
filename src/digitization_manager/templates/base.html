@@ -26,8 +26,13 @@
           <a href="{{ url_for('profile') }}" role="menuitem">Profile Settings</a>
           {% if user.level == 'admin' %}
           <a href="{{ url_for('users') }}" role="menuitem">User Settings</a>
+          <a href="{{ url_for('metadata_settings') }}" role="menuitem">Metadata Settings</a>
+          <form method="post" action="{{ url_for('shutdown') }}" class="usermenu-form"
+                onsubmit="return confirm('Shut down the Digitization Manager server? Everyone connected will be disconnected.');">
+            <button type="submit" role="menuitem" class="menuitem-danger">Shutdown App</button>
+          </form>
           {% endif %}
-          <a href="{{ url_for('logout') }}" role="menuitem">Sign Out</a>
+          <a href="{{ url_for('logout') }}" role="menuitem" class="menuitem-warn">Sign Out</a>
         </div>
       </div>
       {% endif %}

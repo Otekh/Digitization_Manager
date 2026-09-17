@@ -4,6 +4,7 @@ Starts the LAN server on the host machine and opens a browser. Other lab
 machines connect to http://<this-machine-ip>:<port> over the wired network.
 """
 import argparse
+import errno
 import socket
 import subprocess
 import sys
@@ -105,7 +106,19 @@ def main() -> int:
     if not args.no_browser:
         _open_browser_later(f"http://localhost:{args.port}")
 
-    serve(app, host=args.host, port=args.port)
+    try:
+        serve(app, host=args.host, port=args.port)
+    except OSError as exc:
+        if exc.errno == errno.EADDRINUSE:
+            print(
+                f"\nPort {args.port} is already in use — the app is probably "
+                "already running.\n"
+                f"Open http://localhost:{args.port} in your browser, or stop "
+                "the other instance first\n"
+                "(admins: user menu → Shutdown App)."
+            )
+            return 1
+        raise
     return 0
 
 
