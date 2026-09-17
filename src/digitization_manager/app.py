@@ -8,7 +8,10 @@ import json        # SAF package manifests (zip -> entry list)
 import os          # os._exit for the shutdown route
 import re          # date-format validation patterns
 import secrets     # session secret key generation
-import socket      # LAN IP detection for the shareable URL
+import shutil      # locating ip/ifconfig/networksetup for LAN IP detection
+import socket      # default-route fallback for the shareable URL
+import subprocess  # running ip/ifconfig/networksetup
+import sys         # platform check (macOS vs Linux interface detection)
 import threading   # delayed shutdown so the response reaches the browser
 from datetime import datetime  # date validation + package timestamps
 from pathlib import Path       # upload filenames / entry directories
@@ -117,18 +120,121 @@ def knowledge_holder_required(view):
     return wrapped
 
 
+def _tool(name: str) -> str | None:
+    """Locate a system tool: PATH first, then the sbin dirs (which the
+    .app launcher's minimal PATH doesn't include)."""
+    return shutil.which(name) or shutil.which(
+        name, path="/usr/sbin:/sbin:/usr/local/sbin"
+    )
+
+
+def _ipv4_addrs() -> dict[str, str]:
+    """Interface name -> IPv4 address, parsed from `ip` (Linux) or
+    `ifconfig` (macOS). Empty dict if neither tool is available."""
+    ip_cmd = _tool("ip")
+    if ip_cmd:
+        try:
+            out = subprocess.run(
+                [ip_cmd, "-o", "-4", "addr", "show"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout
+        except (OSError, subprocess.SubprocessError):
+            out = ""
+        addrs = {}
+        for line in out.splitlines():
+            # "2: eth0    inet 192.168.1.5/24 brd ..."
+            m = re.match(r"\d+:\s+(\S+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)", line)
+            if m:
+                addrs[m.group(1)] = m.group(2)
+        if addrs:
+            return addrs
+    ifconfig = _tool("ifconfig")
+    if not ifconfig:
+        return {}
+    try:
+        out = subprocess.run(
+            [ifconfig], capture_output=True, text=True, timeout=5
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    addrs, iface = {}, None
+    for line in out.splitlines():
+        m = re.match(r"^([^\s:]+)", line)  # "en0: flags=..." / "eth0  Link..."
+        if m:
+            iface = m.group(1)
+        m = re.search(r"\binet\s+(\d+\.\d+\.\d+\.\d+)", line)
+        if m and iface:
+            addrs[iface] = m.group(1)
+    return addrs
+
+
+def _wired_ifaces() -> set[str]:
+    """Interface names that are wired ethernet (not Wi-Fi/bridge/virtual).
+
+    macOS: `networksetup -listallhardwareports` maps hardware ports to
+    devices. Linux: /sys/class/net entries with a physical device and no
+    wireless dir.
+    """
+    if sys.platform == "darwin":
+        netsetup = _tool("networksetup")
+        if not netsetup:
+            return set()
+        try:
+            out = subprocess.run(
+                [netsetup, "-listallhardwareports"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout
+        except (OSError, subprocess.SubprocessError):
+            return set()
+        wired, port = set(), ""
+        for line in out.splitlines():
+            if line.startswith("Hardware Port:"):
+                port = line.split(":", 1)[1].strip().lower()
+            elif line.startswith("Device:"):
+                dev = line.split(":", 1)[1].strip()
+                if port and not any(
+                    w in port
+                    for w in ("wi-fi", "airport", "bridge", "vpn", "bluetooth")
+                ):
+                    wired.add(dev)
+                port = ""
+        return wired
+    # Linux: physical NICs have a device/ symlink; wifi has wireless/.
+    sys_net = Path("/sys/class/net")
+    if sys_net.is_dir():
+        return {
+            p.name
+            for p in sys_net.iterdir()
+            if (p / "device").exists() and not (p / "wireless").exists()
+        }
+    return set()
+
+
 def lan_ip() -> str:
-    """Best-effort LAN IP of this machine, for the shareable URL shown
-    in the topbar. Opens a UDP socket toward the gateway to learn which
-    local interface would be used — no traffic is actually sent."""
+    """Best-effort LAN IP for the shareable URL in the topbar.
+
+    Lab machines connect over wired ethernet, so a wired interface's
+    IPv4 wins — including a self-assigned 169.254.x.x on a direct
+    machine-to-machine cable. Falls back to the default-route interface
+    (UDP connect trick — no traffic is sent), then any IPv4."""
+    addrs = _ipv4_addrs()
+    for name in sorted(_wired_ifaces()):
+        ip = addrs.get(name, "")
+        if ip and not ip.startswith("127."):
+            return ip
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("192.168.1.1", 80))
         ip = s.getsockname()[0]
         s.close()
-        return ip
+        if not ip.startswith("127."):
+            return ip
     except OSError:
-        return "127.0.0.1"
+        pass
+    for ip in addrs.values():
+        if not ip.startswith("127."):
+            return ip
+    return "127.0.0.1"
 
 
 def _valid_date(fmt: str, value: str) -> bool:
