@@ -1,0 +1,170 @@
+/* OTEKH Digitization Manager - app layout (Option B: tabs + single canvas).
+   Uses tokens from otekh-tokens.css and components from otekh-components.css. */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--otekh-font-body, "Inter", sans-serif);
+  background: var(--otekh-canvas, #f4f3ee);
+  color: var(--otekh-text, #1c1c1a);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  background: var(--otekh-charcoal, #23231f);
+  color: #f4f3ee;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-logo { height: 30px; }
+.brand-name {
+  font-family: var(--otekh-font-display, "Bai Jamjuree", sans-serif);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 15px;
+}
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.server-status { font-size: 12px; color: #b9b8ae; display: flex; align-items: center; gap: 6px; }
+.server-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--otekh-ok, #6f8f4e); display: inline-block; }
+
+/* ---- user menu ---- */
+.usermenu { position: relative; }
+.usermenu-btn {
+  background: none; border: 1px solid #4a4a42; color: #f4f3ee;
+  padding: 6px 12px; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px;
+}
+.usermenu-btn:hover { background: #33332c; }
+.usermenu-drop {
+  display: none; position: absolute; right: 0; top: calc(100% + 4px);
+  background: var(--otekh-panel, #fff); color: var(--otekh-text, #1c1c1a);
+  border: 1px solid var(--otekh-border, #d6d4c9); border-radius: 4px;
+  min-width: 170px; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 50;
+}
+.usermenu.open .usermenu-drop { display: block; }
+.usermenu-drop a {
+  display: block; padding: 9px 14px; color: inherit; text-decoration: none; font-size: 13px;
+}
+.usermenu-drop a:hover { background: var(--otekh-recessed, #eceae1); }
+
+/* ---- tabs ---- */
+.tabs {
+  display: flex; gap: 2px; padding: 0 16px;
+  background: var(--otekh-dark-olive, #3a3d2e);
+}
+.otekh-tab {
+  padding: 10px 18px; color: #cfcebf; text-decoration: none; font-size: 13px;
+  border-radius: 4px 4px 0 0;
+}
+.otekh-tab:hover { color: #fff; background: rgba(255,255,255,.06); }
+.otekh-tab.active {
+  background: var(--otekh-canvas, #f4f3ee); color: var(--otekh-text, #1c1c1a);
+  font-weight: 600;
+}
+
+/* ---- canvas ---- */
+.canvas { flex: 1; padding: 20px; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+/* ---- status bar ---- */
+.statusbar {
+  display: flex; gap: 24px; padding: 6px 16px; font-size: 12px;
+  background: var(--otekh-charcoal, #23231f); color: #b9b8ae;
+}
+.statusbar-right { margin-left: auto; }
+
+/* ---- forms ---- */
+.form-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px 20px;
+}
+.form-grid-wide { grid-column: 1 / -1; }
+.otekh-field { display: flex; flex-direction: column; gap: 4px; }
+textarea.otekh-input { resize: vertical; font-family: inherit; }
+
+.subject-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.subject-row .otekh-select { flex: 1; }
+.subject-remove { padding: 4px 10px; }
+
+.form-actions {
+  display: flex; gap: 12px; align-items: center; margin-top: 20px;
+  padding-top: 16px; border-top: 1px solid var(--otekh-border, #d6d4c9);
+  flex-wrap: wrap;
+}
+.inline-form { display: inline-flex; gap: 8px; align-items: center; }
+.inline-note { width: 160px; padding: 4px 8px; font-size: 12px; }
+
+/* ---- lists & detail ---- */
+.file-list { list-style: none; padding: 0; margin: 8px 0; }
+.file-list li { padding: 4px 0; }
+.file-remove { font-size: 12px; color: var(--otekh-muted, #6d6c62); margin-left: 10px; }
+.history-list { font-size: 13px; color: var(--otekh-muted, #6d6c62); }
+.section-head {
+  font-family: var(--otekh-font-display, "Bai Jamjuree", sans-serif);
+  font-size: 14px; letter-spacing: .05em; margin: 20px 0 8px;
+  text-transform: uppercase; color: var(--otekh-muted, #6d6c62);
+}
+.detail-table th { text-align: left; width: 180px; vertical-align: top; }
+
+.status-chip {
+  font-size: 11px; padding: 2px 10px; border-radius: 10px; margin-left: 10px;
+  vertical-align: middle; text-transform: uppercase; letter-spacing: .05em;
+}
+.status-finalized { background: #e8e2c8; color: #6b5d1f; }
+.status-inspection { background: #f0dfc8; color: #8a5a1d; }
+.status-verified { background: #dde8d2; color: #4a6b2f; }
+.status-returned { background: #efd5d5; color: #8a3535; }
+
+.row-actions { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+
+/* ---- validation errors ---- */
+.req { color: #c0392b; font-weight: 700; margin-left: 3px; }
+.field-error { border-color: #c0392b !important; }
+
+/* ---- returned-entry flagging ---- */
+.tab-badge {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  background: #c0392b; margin-left: 7px; vertical-align: middle;
+}
+.flag-note { color: #c0392b; font-size: 12px; font-style: italic; margin-top: 3px; }
+.detail-flag { font-size: 14px; padding: 8px 16px 0; font-style: normal; }
+.flag-mark { color: #c0392b; font-weight: 700; margin-left: 4px; }
+.flagged-row th, .flagged-row td { background: #faf3f3; }
+.flag-cell { width: 60px; text-align: center; }
+
+/* red flag button (toggles a hidden checkbox) */
+.flag-btn { display: inline-block; cursor: pointer; vertical-align: middle; }
+.flag-btn input { position: absolute; opacity: 0; width: 0; height: 0; }
+.flag-face {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 26px; border-radius: 6px; font-size: 14px; line-height: 1;
+  border: 1px solid #b8b3a4; background: #f0ede4;
+  filter: grayscale(1); opacity: .5; transition: all .12s;
+}
+.flag-btn:hover .flag-face { opacity: .8; }
+.flag-btn input:checked + .flag-face {
+  background: #c0392b; border-color: #8a2a1f; filter: none; opacity: 1;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.35);
+}
+.flag-btn input:focus-visible + .flag-face { outline: 2px solid #c0392b; outline-offset: 2px; }
+
+.flag-reason { margin-top: 4px; width: 170px; font-size: 12px; padding: 3px 6px; }
+.flag-reason[hidden] { display: none; }
+.otekh-field .flag-reason { display: inline-block; margin: 0 0 0 6px; vertical-align: middle; }
+.otekh-field .flag-reason[hidden] { display: none; }
+.title-flag { margin-left: 10px; }
+
+/* ---- misc ---- */
+.login-wrap { display: flex; justify-content: center; padding-top: 60px; }
+.login-panel { width: 340px; }
+.narrow-panel { max-width: 480px; }
+.add-user-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.add-user-form .otekh-input { width: 180px; }
+.otekh-banner { margin-bottom: 14px; }
+code { font-size: 12px; background: var(--otekh-recessed, #eceae1); padding: 1px 5px; border-radius: 3px; }

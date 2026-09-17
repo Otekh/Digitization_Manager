@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Sign In - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="otekh-panel login-panel">
+    <div class="otekh-panel__title">Sign In</div>
+    <div class="otekh-panel__body">
+      <form method="post">
+        <div class="otekh-field">
+          <label class="otekh-label" for="username">Username</label>
+          <input class="otekh-input" id="username" name="username" required autofocus>
+        </div>
+        <div class="otekh-field">
+          <label class="otekh-label" for="password">Password</label>
+          <input class="otekh-input" id="password" name="password" type="password" required>
+        </div>
+        <button class="otekh-button otekh-button--primary" type="submit">Sign In</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

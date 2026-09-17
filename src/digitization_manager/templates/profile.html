@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Profile Settings - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="otekh-panel narrow-panel">
+  <div class="otekh-panel__title">Profile Settings</div>
+  <div class="otekh-panel__body">
+    <form method="post">
+      <div class="otekh-field">
+        <label class="otekh-label" for="username">Username</label>
+        <input class="otekh-input" id="username" name="username" value="{{ user.username }}">
+      </div>
+      <div class="otekh-field">
+        <label class="otekh-label" for="new_password">New Password</label>
+        <input class="otekh-input" id="new_password" name="new_password" type="password">
+        <div class="otekh-help">Leave blank to keep your current password.</div>
+      </div>
+      <div class="otekh-field">
+        <label class="otekh-label" for="current_password">Current Password (required to save)</label>
+        <input class="otekh-input" id="current_password" name="current_password" type="password" required>
+      </div>
+      <button class="otekh-button otekh-button--primary" type="submit">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

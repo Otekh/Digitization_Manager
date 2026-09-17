@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OTEKH Starter Shell</title>
+  <link rel="stylesheet" href="../components/otekh-components.css">
+  <style>
+    body { min-height:100vh; display:grid; grid-template:64px 1fr 44px / 256px 1fr 320px; }
+    .top { grid-column:1/-1; background:#282b24; color:#f2f1e9; border-bottom:3px solid #caa133; display:flex; align-items:center; padding:0 16px; gap:24px; }
+    .brand { font:600 18px "Bai Jamjuree"; }
+    .context { color:#c7c7c4; }
+    nav { background:#adaca6; border-right:1px solid #818377; padding:16px; }
+    nav a { display:block; padding:9px 10px; color:#282b24; text-decoration:none; border-left:3px solid transparent; }
+    nav a[aria-current="page"] { color:#282b24; border-left-color:#caa133; font-weight:600; }
+    main { padding:16px; overflow:auto; }
+    aside { border-left:1px solid #818377; background:#c7c7c4; padding:12px; }
+    footer { grid-column:1/-1; background:#282b24; color:#c7c7c4; display:flex; align-items:center; justify-content:space-between; padding:0 16px; font-size:12px; }
+    h1 { margin:0 0 12px; font:600 20px "Bai Jamjuree"; color:#646a44; }
+    @media(max-width:900px) { body { grid-template:64px 1fr 44px / 1fr; } nav,aside { display:none; } .top,footer { grid-column:1; } }
+  </style>
+
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:_ApprovalStatus msdt:dt="string">0</mso:_ApprovalStatus>
+<mso:_ApprovalAssignedTo msdt:dt="string"></mso:_ApprovalAssignedTo>
+<mso:_ApprovalRespondedBy msdt:dt="string"></mso:_ApprovalRespondedBy>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+<body>
+  <header class="top"><span class="brand">OTEKH LABS</span><span class="context">Project / Wetland Study A</span><span style="margin-left:auto;color:#aec76f">● Connected</span></header>
+  <nav aria-label="Primary">
+    <a href="#">Overview</a>
+    <a href="#" aria-current="page">Live data</a>
+    <a href="#">Inputs</a>
+    <a href="#">Process</a>
+    <a href="#">Output</a>
+    <a href="#">Reports</a>
+    <a href="#">Settings</a>
+  </nav>
+  <main>
+    <h1>LIVE DATA</h1>
+    <section class="otekh-panel"><div class="otekh-panel__title">Primary work canvas</div><div class="otekh-panel__body">Place the active chart, media viewer, editor, table, map, or project material here.</div></section>
+  </main>
+  <aside><section class="otekh-panel"><div class="otekh-panel__title">Inspector</div><div class="otekh-panel__body">Properties, metadata, permissions, parameters, and history.</div></section></aside>
+  <footer><span>System operational</span><span>Storage 62%</span><span>v1.0.0</span></footer>
+</body>
+</html>
+

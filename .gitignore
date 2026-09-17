@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Runtime data lives in ~/Documents/OTEKH Digitization Manager/ — but ignore
+# it here too in case DIGIMGR_DATA is ever pointed inside the repo.
+auth.json
+entries.sqlite*
+1_Finalized/
+2_Further_Inspection/
+3_Verified/
+4_DSpace_Packages/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

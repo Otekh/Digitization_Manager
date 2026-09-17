@@ -1,0 +1,192 @@
+~ {% extends "base.html" %}
+{% block title %}{{ 'Edit Entry' if entry else 'New Entry' }} - {{ app_name }}{% endblock %}
+{% block content %}
+{% macro flagbit(key) %}
+{% if can_flag %}<label class="flag-btn" title="Flag this field"><input type="checkbox" name="flag" value="{{ key }}"><span class="flag-face">&#128681;</span></label><input class="flag-reason" name="flag_reason_{{ key }}" maxlength="50" placeholder="reason (max 50)" hidden>{% elif key in flagged %}<span class="flag-mark" title="Flagged for fixing">&#9873;</span>{% if flagged.get(key) %}<span class="flag-note">{{ flagged[key] }}</span>{% endif %}{% endif %}
+{% endmacro %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">{{ 'Edit Entry' if entry else 'New Entry' }}</div>
+  <div class="otekh-panel__body">
+    <form method="post" enctype="multipart/form-data" id="entry-form">
+      <div class="form-grid">
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="title">Document Title{% if 'title' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('title') }}
+          <input class="otekh-input{{ ' field-error' if 'title' in error_fields }}" id="title" name="title" value="{{ m.get('title', '') }}" required>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="file_name">File Name{% if 'file_name' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('file_name') }}
+          <input class="otekh-input{{ ' field-error' if 'file_name' in error_fields }}" id="file_name" name="file_name" value="{{ m.get('file_name', '') }}" required>
+          <div class="otekh-help">Saved as this name plus the file's extension (e.g. name.pdf). Extra files get _2, _3.</div>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="location">Location{% if 'location' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('location') }}
+          <select class="otekh-select{{ ' field-error' if 'location' in error_fields }}" id="location" name="location" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['Location'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('location') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('location') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="media_type">Media Type{% if 'media_type' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('media_type') }}
+          <select class="otekh-select{{ ' field-error' if 'media_type' in error_fields }}" id="media_type" name="media_type" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['Media Type'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('media_type') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('media_type') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="equipment_id">Equipment ID{% if 'equipment_id' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('equipment_id') }}
+          <select class="otekh-select{{ ' field-error' if 'equipment_id' in error_fields }}" id="equipment_id" name="equipment_id" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['Equipment ID'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('equipment_id') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('equipment_id') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="date_format">Date Created{% if 'date_format' in error_fields or 'date_value' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('date_value') }}
+          <select class="otekh-select{{ ' field-error' if 'date_format' in error_fields }}" id="date_format" name="date_format" required>
+            <option value="">-- select format --</option>
+            {% for key, (label, _) in date_formats.items() %}
+            <option value="{{ key }}" {{ 'selected' if m.get('date_format') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <input class="otekh-input{{ ' field-error' if 'date_value' in error_fields }}" id="date_value" name="date_value"
+                 value="{{ m.get('date_value', '') if m.get('date_format') != 'unknown' else '' }}"
+                 placeholder="Select a format first" style="margin-top:6px">
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="collection_source">Collection Source{% if 'collection_source' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('collection_source') }}
+          <select class="otekh-select{{ ' field-error' if 'collection_source' in error_fields }}" id="collection_source" name="collection_source" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['Collection, Source'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('collection_source') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('collection_source') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="era">Era{% if 'era' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('era') }}
+          <select class="otekh-select{{ ' field-error' if 'era' in error_fields }}" id="era" name="era" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['Era'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('era') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('era') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="access_control">Access Control{% if 'access_control' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('access_control') }}
+          <select class="otekh-select{{ ' field-error' if 'access_control' in error_fields }}" id="access_control" name="access_control" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['Access Control'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('access_control') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('access_control') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field">
+          <label class="otekh-label" for="ai_trainable">AI Trainable{% if 'ai_trainable' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('ai_trainable') }}
+          <select class="otekh-select{{ ' field-error' if 'ai_trainable' in error_fields }}" id="ai_trainable" name="ai_trainable" required>
+            <option value="">-- select --</option>
+            {% for o in opts.fields['AI Trainable'] %}
+            <option value="{{ o.label }}" {{ 'selected' if m.get('ai_trainable') == o.label }}>{{ o.label }}</option>
+            {% endfor %}
+            <option value="Unknown" {{ 'selected' if m.get('ai_trainable') == 'Unknown' }}>Unknown</option>
+          </select>
+        </div>
+
+        <div class="otekh-field form-grid-wide">
+          <label class="otekh-label" for="lineage">Lineage, Provenance{% if 'lineage' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('lineage') }}
+          <input class="otekh-input{{ ' field-error' if 'lineage' in error_fields }}" id="lineage" name="lineage" value="{{ m.get('lineage', '') }}" required>
+        </div>
+
+        <div class="otekh-field form-grid-wide">
+          <label class="otekh-label">Theme / Sub Theme{% if 'theme' in error_fields or 'sub' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('subjects') }}
+          <div id="subject-rows">
+            {% set subjects = m.get('subjects') or [{'theme': '', 'sub': ''}] %}
+            {% for s in subjects %}
+            <div class="subject-row">
+              <select class="otekh-select theme-select{{ ' field-error' if 'theme' in error_fields }}" name="theme" required>
+                <option value="">-- theme --</option>
+                {% for t in opts.themes %}
+                <option value="{{ t }}" {{ 'selected' if s.theme == t }}>{{ t }}</option>
+                {% endfor %}
+                <option value="Unknown" {{ 'selected' if s.theme == 'Unknown' }}>Unknown</option>
+              </select>
+              <select class="otekh-select sub-select{{ ' field-error' if 'sub' in error_fields }}" name="sub">
+                <option value="">-- sub theme --</option>
+                {% if s.theme in opts.subthemes %}
+                  {% for sub in opts.subthemes[s.theme] %}
+                  <option value="{{ sub }}" {{ 'selected' if s.sub == sub }}>{{ sub }}</option>
+                  {% endfor %}
+                {% endif %}
+                <option value="Unknown" {{ 'selected' if s.sub == 'Unknown' }}>Unknown</option>
+              </select>
+              <button type="button" class="otekh-button otekh-button--danger subject-remove" title="Remove">&#10005;</button>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="otekh-button" id="subject-add">+ Add Theme</button>
+        </div>
+
+        <div class="otekh-field form-grid-wide">
+          <label class="otekh-label" for="summary">Summary{% if 'summary' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('summary') }}
+          <textarea class="otekh-input{{ ' field-error' if 'summary' in error_fields }}" id="summary" name="summary" rows="4" required>{{ m.get('summary', '') }}</textarea>
+          <div class="otekh-help"><span id="summary-count">0</span> characters (minimum 50)</div>
+        </div>
+
+        <div class="otekh-field form-grid-wide">
+          <label class="otekh-label" for="files">Files{% if 'files' in error_fields %}<span class="req">*</span>{% endif %}</label>{{ flagbit('files') }}
+          {% if entry %}
+          <ul class="file-list">
+            {% for f in entry.files %}
+            <li>
+              <a href="{{ url_for('entry_file', entry_id=entry.id, filename=f) }}" target="_blank">{{ f }}</a>
+              <label class="file-remove"><input type="checkbox" name="remove_file" value="{{ f }}"> remove</label>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          <input class="otekh-input{{ ' field-error' if 'files' in error_fields }}" id="files" name="files" type="file" multiple {{ 'required' if not entry }}>
+          <div class="otekh-help">{{ 'Add more files, or tick remove to delete existing ones.' if entry else 'One or more files. Uses the system file picker.' }}</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        {% if entry and entry.status == 'returned' %}
+        <button class="otekh-button otekh-button--primary" type="submit" name="action" value="finalized">Finalize</button>
+        <button class="otekh-button" type="submit" name="action" value="inspection">Further Inspection</button>
+        <button class="otekh-button" type="submit" name="action" value="save">Save Changes Only</button>
+        {% elif entry.status == 'inspection' %}
+        <input class="otekh-input inline-note" name="note" placeholder="note for the creator (optional)" maxlength="75">
+        <button class="otekh-button otekh-button--primary" type="submit" name="action" value="finalized" id="btn-finalize">Finalize</button>
+        <button class="otekh-button otekh-button--danger" type="submit" name="action" value="return" id="btn-return" hidden>Return to User</button>
+        {% elif entry %}
+        <button class="otekh-button otekh-button--primary" type="submit" name="action" value="save">Save Changes</button>
+        {% else %}
+        <button class="otekh-button otekh-button--primary" type="submit" name="action" value="finalized">Finalize</button>
+        <button class="otekh-button" type="submit" name="action" value="inspection">Further Inspection</button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<script id="subthemes-data" type="application/json">{{ opts.subthemes | tojson }}</script>
+{% endblock %}

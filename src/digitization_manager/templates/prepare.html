@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Prepare for DSpace - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">Prepare for DSpace</div>
+  <div class="otekh-panel__body">
+    <p>Builds a zipped DSpace Simple Archive Format (SAF) package from all
+    <strong>{{ entries | length }}</strong> verified entries in
+    <code>3_Verified</code>. The zip downloads through your browser (to your
+    Downloads folder by default); a copy is also kept in
+    <code>4_DSpace_Packages</code>.</p>
+
+    <form method="post">
+      <button class="otekh-button otekh-button--primary" type="submit"
+              {{ 'disabled' if not entries }}>Build SAF Package</button>
+    </form>
+
+    {% if packages %}
+    <h3 class="section-head">Packages in 4_DSpace_Packages</h3>
+    <ul class="file-list">
+      {% for p in packages %}
+      <li>{{ p.name }} <span class="otekh-help">({{ (p.stat().st_size / 1024) | round(1) }} KB)</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

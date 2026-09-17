@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">{{ title }} ({{ entries | length }})</div>
+  <div class="otekh-panel__body">
+    {% if entries %}
+    <table class="otekh-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>File(s)</th>
+          <th>Type</th>
+          <th>Submitted by</th>
+          <th>Date</th>
+          {% if mode == 'review' %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td>
+            <a href="{{ url_for('entry_detail', entry_id=e.id) }}">{{ e.metadata.title }}</a>
+            {% if mode == 'returned' %}
+              {% for k, r in e.flags.items() %}
+              <div class="flag-note">&#9873; {{ flag_labels.get(k, k) }}{% if r %}: {{ r }}{% endif %}</div>
+              {% endfor %}
+              {% if e.return_note %}<div class="flag-note">{{ e.return_note }}</div>{% endif %}
+            {% endif %}
+          </td>
+          <td>{{ e.files | join(', ') }}</td>
+          <td>{{ e.metadata.media_type }}</td>
+          <td>{{ e.created_by }}{% if mode == 'review' and e.created_by == user.username %} <em>(you)</em>{% endif %}</td>
+          <td>{{ e.created_at[:10] }}</td>
+          {% if mode == 'review' %}
+          <td><a class="otekh-button" href="{{ url_for('entry_detail', entry_id=e.id) }}">Review</a></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="otekh-help">No entries here right now.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+#IDE created
+build.xml
+manifest.mf
+nbproject
+.idea/
+*.iml
+
+#Compiled
+build/
+dist/
+out/
+*.class
+target/*
+# ...but keep the pre-built shaded jar the app runs at runtime
+!target/safbuilder-1.6.jar
+dependency-reduced-pom.xml
+
+#Local stash for .jars
+lib-files/
+
+#Created Output, only really used if you build the sample_data.
+SimpleArchiveFormat/
+
+.DS_Store

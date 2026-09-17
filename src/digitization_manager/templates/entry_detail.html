@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.metadata.title }} - {{ app_name }}{% endblock %}
+{% block content %}
+{% macro flagcell(key) %}
+{% if can_flag %}<td class="flag-cell">
+  <label class="flag-btn" title="Flag this field"><input type="checkbox" form="return-form" name="flag" value="{{ key }}"><span class="flag-face">&#128681;</span></label>
+  <input class="flag-reason" form="return-form" name="flag_reason_{{ key }}" maxlength="50" placeholder="reason (max 50)" hidden>
+</td>{% endif %}
+{% endmacro %}
+{% macro th(label, key) %}
+<th>{{ label }}{% if key in flagged %} <span class="flag-mark" title="Flagged">&#9873;</span>{% if flagged.get(key) %}<div class="flag-note">{{ flagged[key] }}</div>{% endif %}{% endif %}</th>
+{% endmacro %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">
+    {{ entry.metadata.title }}
+    {% if 'title' in flagged %}<span class="flag-mark" title="Flagged">&#9873;</span>{% endif %}
+    <span class="status-chip status-{{ entry.status }}">{{ status_labels[entry.status] }}</span>
+    {% if can_flag %}<label class="flag-btn title-flag" title="Flag the title"><input type="checkbox" form="return-form" name="flag" value="title"><span class="flag-face">&#128681;</span></label>
+    <input class="flag-reason" form="return-form" name="flag_reason_title" maxlength="50" placeholder="reason (max 50)" hidden>{% endif %}
+  </div>
+  {% if entry.status == 'returned' %}
+    {% if flagged.get('title') %}<div class="flag-note detail-flag">&#9873; Title: {{ flagged['title'] }}</div>{% endif %}
+    {% if return_note %}<div class="flag-note detail-flag">&#9873; {{ return_note }}</div>{% endif %}
+  {% endif %}
+  <div class="otekh-panel__body">
+    <table class="otekh-table detail-table">
+      <tbody>
+        <tr class="{{ 'flagged-row' if 'file_name' in flagged }}">{{ th('File Name', 'file_name') }}<td>{{ entry.metadata.file_name }}</td>{{ flagcell('file_name') }}</tr>
+        <tr class="{{ 'flagged-row' if 'location' in flagged }}">{{ th('Location', 'location') }}<td>{{ entry.metadata.location }}</td>{{ flagcell('location') }}</tr>
+        <tr class="{{ 'flagged-row' if 'media_type' in flagged }}">{{ th('Media Type', 'media_type') }}<td>{{ entry.metadata.media_type }}</td>{{ flagcell('media_type') }}</tr>
+        <tr class="{{ 'flagged-row' if 'equipment_id' in flagged }}">{{ th('Equipment ID', 'equipment_id') }}<td>{{ entry.metadata.equipment_id }}</td>{{ flagcell('equipment_id') }}</tr>
+        <tr class="{{ 'flagged-row' if 'date_value' in flagged }}">{{ th('Date Created', 'date_value') }}<td>{{ entry.metadata.date_value }}</td>{{ flagcell('date_value') }}</tr>
+        <tr class="{{ 'flagged-row' if 'collection_source' in flagged }}">{{ th('Collection Source', 'collection_source') }}<td>{{ entry.metadata.collection_source }}</td>{{ flagcell('collection_source') }}</tr>
+        <tr class="{{ 'flagged-row' if 'lineage' in flagged }}">{{ th('Lineage, Provenance', 'lineage') }}<td>{{ entry.metadata.lineage }}</td>{{ flagcell('lineage') }}</tr>
+        <tr class="{{ 'flagged-row' if 'era' in flagged }}">{{ th('Era', 'era') }}<td>{{ entry.metadata.era }}</td>{{ flagcell('era') }}</tr>
+        <tr class="{{ 'flagged-row' if 'subjects' in flagged }}">{{ th('Themes', 'subjects') }}<td>
+          {% for s in entry.metadata.subjects %}
+          <div>{{ s.theme }}{% if s.sub %} &rsaquo; {{ s.sub }}{% endif %}</div>
+          {% endfor %}
+        </td>{{ flagcell('subjects') }}</tr>
+        <tr class="{{ 'flagged-row' if 'access_control' in flagged }}">{{ th('Access Control', 'access_control') }}<td>{{ entry.metadata.access_control }}</td>{{ flagcell('access_control') }}</tr>
+        <tr class="{{ 'flagged-row' if 'ai_trainable' in flagged }}">{{ th('AI Trainable', 'ai_trainable') }}<td>{{ entry.metadata.ai_trainable }}</td>{{ flagcell('ai_trainable') }}</tr>
+        <tr class="{{ 'flagged-row' if 'summary' in flagged }}">{{ th('Summary', 'summary') }}<td>{{ entry.metadata.summary }}</td>{{ flagcell('summary') }}</tr>
+        <tr><th>Submitted by</th><td>{{ entry.created_by }} &middot; {{ entry.created_at[:10] }}</td>{% if can_flag %}<td></td>{% endif %}</tr>
+        {% if entry.verified_by %}<tr><th>Verified by</th><td>{{ entry.verified_by }}</td>{% if can_flag %}<td></td>{% endif %}</tr>{% endif %}
+      </tbody>
+    </table>
+
+    <h3 class="section-head">Files{% if 'files' in flagged %} <span class="flag-mark" title="Flagged">&#9873;</span>{% if flagged.get('files') %}<span class="flag-note"> {{ flagged['files'] }}</span>{% endif %}{% endif %}{% if can_flag %} <label class="flag-btn" title="Flag the files"><input type="checkbox" form="return-form" name="flag" value="files"><span class="flag-face">&#128681;</span></label> <input class="flag-reason" form="return-form" name="flag_reason_files" maxlength="50" placeholder="reason (max 50)" hidden>{% endif %}</h3>
+    <ul class="file-list">
+      {% for f in entry.files %}
+      <li><a href="{{ url_for('entry_file', entry_id=entry.id, filename=f) }}" target="_blank">{{ f }}</a></li>
+      {% endfor %}
+    </ul>
+
+    <h3 class="section-head">History</h3>
+    <ul class="history-list">
+      {% for h in entry.history %}
+      <li>{{ h.at[:16] | replace('T', ' ') }} &mdash; {{ h.by }}: {{ h.event }}{% if h.note %} <em>({{ h.note }})</em>{% endif %}</li>
+      {% endfor %}
+    </ul>
+
+    <div class="form-actions">
+      {# Edit: creator on returned entries, knowledge holder on inspection entries #}
+      {% if (entry.status == 'returned' and entry.created_by == user.username)
+            or (entry.status == 'inspection' and user.type == 'knowledge_holder') %}
+      <a class="otekh-button" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
+      {% endif %}
+
+      {# Admin actions on reviewable entries #}
+      {% if user.level == 'admin' and entry.status in ('finalized', 'inspection') %}
+        {% if entry.created_by != user.username %}
+        <form method="post" action="{{ url_for('verify_entry', entry_id=entry.id) }}" class="inline-form">
+          <button class="otekh-button otekh-button--primary" type="submit">Verify</button>
+        </form>
+        {% else %}
+        <span class="otekh-help">Your own entry — another admin must verify it.</span>
+        {% endif %}
+        {% if entry.status == 'finalized' %}
+        <form method="post" action="{{ url_for('inspect_move', entry_id=entry.id) }}" class="inline-form">
+          <input class="otekh-input inline-note" name="note" placeholder="note (optional)">
+          <button class="otekh-button" type="submit">Further Inspection</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('return_entry', entry_id=entry.id) }}" class="inline-form" id="return-form">
+          <input class="otekh-input inline-note" name="note" placeholder="reason (optional)" maxlength="75">
+          <button class="otekh-button otekh-button--danger" type="submit">Return to User</button>
+        </form>
+        {% if can_flag %}<span class="otekh-help">Click a field's &#128681; button to flag it for fixing, then Return to User.</span>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

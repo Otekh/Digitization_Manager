@@ -1,0 +1,90 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "meta": {
+    "name": "OTEKH Application Design System",
+    "version": "1.0.0",
+    "date": "2026-07-24"
+  },
+  "color": {
+    "brand": {
+      "olive": { "$value": "#646A44", "$type": "color" },
+      "gold": { "$value": "#CAA133", "$type": "color" },
+      "black": { "$value": "#000000", "$type": "color" },
+      "silver": { "$value": "#C0C0C0", "$type": "color" }
+    },
+    "surface": {
+      "chrome": { "$value": "#282B24", "$type": "color" },
+      "darkOlive": { "$value": "#4E4F37", "$type": "color" },
+      "canvas": { "$value": "#C1C1BD", "$type": "color" },
+      "panel": { "$value": "#C7C7C4", "$type": "color" },
+      "recessed": { "$value": "#ADACA6", "$type": "color" },
+      "muted": { "$value": "#818377", "$type": "color" }
+    },
+    "border": {
+      "default": { "$value": "#818377", "$type": "color" },
+      "strong": { "$value": "#606255", "$type": "color" }
+    },
+    "text": {
+      "primary": { "$value": "#282B24", "$type": "color" },
+      "secondary": { "$value": "#4E4F37", "$type": "color" },
+      "inverse": { "$value": "#F0F0EA", "$type": "color" },
+      "inverseMuted": { "$value": "#C7C7C4", "$type": "color" },
+      "disabled": { "$value": "#606255", "$type": "color" }
+    },
+    "action": {
+      "primary": { "$value": "#CFA134", "$type": "color" },
+      "pressed": { "$value": "#B28926", "$type": "color" },
+      "focus": { "$value": "#CAA133", "$type": "color" }
+    },
+    "status": {
+      "good": { "$value": "#AEC76F", "$type": "color" },
+      "attention": { "$value": "#CFA134", "$type": "color" },
+      "error": { "$value": "#A52B32", "$type": "color" },
+      "info": { "$value": "#5C7880", "$type": "color" }
+    }
+  },
+  "font": {
+    "family": {
+      "display": { "$value": "\"Bai Jamjuree\", \"Avenir Next\", \"Segoe UI\", sans-serif", "$type": "fontFamily" },
+      "ui": { "$value": "\"Inter\", \"Segoe UI\", Arial, sans-serif", "$type": "fontFamily" },
+      "mono": { "$value": "\"Inter\", \"SFMono-Regular\", Consolas, monospace", "$type": "fontFamily" }
+    },
+    "weight": {
+      "regular": { "$value": 400, "$type": "fontWeight" },
+      "medium": { "$value": 500, "$type": "fontWeight" },
+      "semibold": { "$value": 600, "$type": "fontWeight" }
+    }
+  },
+  "space": {
+    "1": { "$value": "4px", "$type": "dimension" },
+    "2": { "$value": "8px", "$type": "dimension" },
+    "3": { "$value": "12px", "$type": "dimension" },
+    "4": { "$value": "16px", "$type": "dimension" },
+    "6": { "$value": "24px", "$type": "dimension" },
+    "8": { "$value": "32px", "$type": "dimension" },
+    "12": { "$value": "48px", "$type": "dimension" },
+    "16": { "$value": "64px", "$type": "dimension" }
+  },
+  "size": {
+    "controlCompact": { "$value": "32px", "$type": "dimension" },
+    "controlDefault": { "$value": "40px", "$type": "dimension" },
+    "controlTouch": { "$value": "44px", "$type": "dimension" },
+    "appBar": { "$value": "64px", "$type": "dimension" },
+    "statusBar": { "$value": "44px", "$type": "dimension" },
+    "sidebar": { "$value": "256px", "$type": "dimension" },
+    "inspector": { "$value": "320px", "$type": "dimension" }
+  },
+  "border": {
+    "width": { "$value": "1px", "$type": "dimension" },
+    "radiusControl": { "$value": "2px", "$type": "dimension" },
+    "radiusContainer": { "$value": "4px", "$type": "dimension" }
+  },
+  "motion": {
+    "fast": { "$value": "100ms", "$type": "duration" },
+    "panel": { "$value": "180ms", "$type": "duration" }
+  },
+  "breakpoint": {
+    "compact": { "$value": "720px", "$type": "dimension" },
+    "wide": { "$value": "1200px", "$type": "dimension" }
+  }
+}

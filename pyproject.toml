@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "otekh-digitization-manager"
+version = "0.1.0"
+description = "OTEKH Digitization Manager - lab-internal digitization intake, review, and DSpace bulk-prep."
+requires-python = ">=3.10"
+dependencies = [
+    "flask>=3.0",
+    "waitress>=3.0",
+    "ocrmypdf>=16.4",
+]
+
+[project.scripts]
+digitization_manager = "digitization_manager.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/digitization_manager"]

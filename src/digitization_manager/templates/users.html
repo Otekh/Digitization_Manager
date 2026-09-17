@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}User Settings - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="otekh-panel">
+  <div class="otekh-panel__title">User Settings</div>
+  <div class="otekh-panel__body">
+    <table class="otekh-table">
+      <thead>
+        <tr><th>Username</th><th>Level</th><th>Type</th><th>Reset Password</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>
+            <form method="post" class="inline-form">
+              <input type="hidden" name="action" value="edit">
+              <input type="hidden" name="username" value="{{ u.username }}">
+              <select class="otekh-select" name="level" onchange="this.form.submit()">
+                <option value="user" {{ 'selected' if u.level == 'user' }}>user</option>
+                <option value="admin" {{ 'selected' if u.level == 'admin' }}>admin</option>
+              </select>
+          </td>
+          <td>
+              <select class="otekh-select" name="type" onchange="this.form.submit()">
+                <option value="lab_member" {{ 'selected' if u.type == 'lab_member' }}>Lab Member</option>
+                <option value="knowledge_holder" {{ 'selected' if u.type == 'knowledge_holder' }}>Knowledge Holder</option>
+              </select>
+            </form>
+          </td>
+          <td>
+            <form method="post" class="inline-form">
+              <input type="hidden" name="action" value="reset">
+              <input type="hidden" name="username" value="{{ u.username }}">
+              <input class="otekh-input inline-note" name="new_password" type="password" placeholder="new password" required>
+              <button class="otekh-button" type="submit">Reset</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" class="inline-form" onsubmit="return confirm('Delete user {{ u.username }}?')">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="username" value="{{ u.username }}">
+              <button class="otekh-button otekh-button--danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3 class="section-head">Add User</h3>
+    <form method="post" class="add-user-form">
+      <input type="hidden" name="action" value="add">
+      <input class="otekh-input" name="username" placeholder="username" required>
+      <input class="otekh-input" name="password" type="password" placeholder="password" required>
+      <select class="otekh-select" name="level">
+        <option value="user">user</option>
+        <option value="admin">admin</option>
+      </select>
+      <select class="otekh-select" name="type">
+        <option value="lab_member">Lab Member</option>
+        <option value="knowledge_holder">Knowledge Holder</option>
+      </select>
+      <button class="otekh-button otekh-button--primary" type="submit">Add</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
