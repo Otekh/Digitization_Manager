@@ -24,8 +24,8 @@
   // navigator.clipboard needs a secure context (https/localhost); plain
   // http on the LAN isn't one, so fall back to a hidden textarea +
   // execCommand("copy") which still works there.
-  var shareBtn = document.getElementById("share-url");
-  if (shareBtn) {
+  // One button per share URL (multiple wired interfaces = multiple IPs).
+  document.querySelectorAll(".share-url").forEach(function (shareBtn) {
     shareBtn.addEventListener("click", function () {
       var text = shareBtn.getAttribute("data-url") || shareBtn.textContent.trim();
       function done() {
@@ -51,7 +51,7 @@
         legacyCopy();
       }
     });
-  }
+  });
 
   // ---- theme -> sub-theme filtering + add/remove rows ----
   // The template embeds {theme: [sub, ...]} as JSON in a script tag so

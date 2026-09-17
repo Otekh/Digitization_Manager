@@ -106,14 +106,14 @@ def main() -> int:
     # and don't build the Flask app / data dirs unnecessarily.
     from waitress import serve  # production WSGI server (threads, LAN-safe)
 
-    from .app import app, lan_ip
+    from .app import app, lan_ips
 
     root = paths.ensure_data_dirs()
-    lan = lan_ip()
     print(f"{APP_NAME} {__version__}")
     print(f"Archive folder: {root}")
     print(f"This machine:   http://localhost:{args.port}")
-    print(f"Lab machines:   http://{lan}:{args.port}")
+    for ip in lan_ips():
+        print(f"Lab machines:   http://{ip}:{args.port}")
     print("Press Ctrl+C to stop.")
 
     browser_timer = None

@@ -16,8 +16,10 @@
       <span class="brand-name">DIGITIZATION MANAGER</span>
     </div>
     <div class="topbar-right">
-      <button type="button" class="share-url" id="share-url"
-              title="Address for other machines on the network — click to copy">{{ share_url }}</button>
+      {% for u in share_urls %}
+      <button type="button" class="share-url"
+              title="Address for other machines on the network — click to copy">{{ u }}</button>
+      {% endfor %}
       <span class="server-status"><span class="dot"></span>Server</span>
       {% if user %}
       <div class="usermenu" id="usermenu">

@@ -212,31 +212,40 @@ def _wired_ifaces() -> set[str]:
     return set()
 
 
-def lan_ip() -> str:
-    """Best-effort LAN IP for the shareable URL in the topbar.
+def lan_ips() -> list[str]:
+    """All shareable LAN IPs, best first.
 
-    Lab machines connect over wired ethernet, so a wired interface's
-    IPv4 wins — including a self-assigned 169.254.x.x on a direct
-    machine-to-machine cable. Falls back to the default-route interface
-    (UDP connect trick — no traffic is sent), then any IPv4."""
+    Every wired interface's IPv4 is listed — a host can have several
+    direct-link subnets (built-in ethernet + USB dongle), and each is a
+    valid way for lab machines to reach the app. Then the default-route
+    IP (UDP connect trick — no traffic is sent) if different, then any
+    IPv4. Fallback: 127.0.0.1."""
     addrs = _ipv4_addrs()
+    ips = []
     for name in sorted(_wired_ifaces()):
         ip = addrs.get(name, "")
-        if ip and not ip.startswith("127."):
-            return ip
+        if ip and not ip.startswith("127.") and ip not in ips:
+            ips.append(ip)
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("192.168.1.1", 80))
         ip = s.getsockname()[0]
         s.close()
-        if not ip.startswith("127."):
-            return ip
+        if not ip.startswith("127.") and ip not in ips:
+            ips.append(ip)
     except OSError:
         pass
-    for ip in addrs.values():
-        if not ip.startswith("127."):
-            return ip
-    return "127.0.0.1"
+    if not ips:
+        for ip in addrs.values():
+            if not ip.startswith("127."):
+                ips.append(ip)
+                break
+    return ips or ["127.0.0.1"]
+
+
+def lan_ip() -> str:
+    """The primary share IP (first of lan_ips)."""
+    return lan_ips()[0]
 
 
 def _valid_date(fmt: str, value: str) -> bool:
@@ -481,9 +490,11 @@ def inject_globals():
             1 for e in store.list_entries("returned")
             if e["created_by"] == u["username"]
         )
-    # Shareable URL for the topbar: this machine's LAN IP + the port the
-    # request arrived on (SERVER_PORT is set by waitress).
-    share_url = f"http://{lan_ip()}:{request.environ.get('SERVER_PORT', '8000')}"
+    # Shareable URLs for the topbar: one per LAN IP (built-in ethernet,
+    # USB dongles, Wi-Fi default route) on the port the request arrived
+    # on (SERVER_PORT is set by waitress).
+    port = request.environ.get("SERVER_PORT", "8000")
+    share_urls = [f"http://{ip}:{port}" for ip in lan_ips()]
     return {
         "app_name": APP_NAME,
         "version": __version__,
@@ -492,7 +503,7 @@ def inject_globals():
         "my_returned": my_returned,
         "status_labels": STATUS_LABELS,
         "flag_labels": dict(FLAGGABLE_FIELDS),
-        "share_url": share_url,
+        "share_urls": share_urls,
     }
 
 
