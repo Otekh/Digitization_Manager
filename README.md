@@ -37,9 +37,12 @@ dropdowns export their codes (e.g. `BK`), subjects export as
 
 - **Levels**: `user` and `admin`. **Types**: `Lab Member` and
   `Knowledge Holder` (Knowledge Holders can see Folder 2 entries).
-- A hidden permanent admin exists for recovery: username `admin`
-  (recovery password is set in `src/digitization_manager/auth.py`).
-  It cannot be edited or deleted.
+- A hidden permanent admin exists for recovery: username `admin`.
+  The installer prompts for its password on first install and stores it
+  in `admin_password.txt` inside the archive folder (never in the repo).
+  If the file is missing the app generates a random password there on
+  first run. Edit the file and restart to reset it. The account cannot
+  be edited or deleted from the UI.
 - Admins add/delete users and reset passwords under **User Settings**.
   Users change their own username/password under **Profile Settings**.
 

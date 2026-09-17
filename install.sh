@@ -123,6 +123,33 @@ sed -i.bak "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$BIN_DIR/digitization_manager"
 rm -f "$BIN_DIR/digitization_manager.bak"
 chmod +x "$BIN_DIR/digitization_manager"
 
+# --- recovery admin password ---
+# The hidden 'admin' account's password lives in the data root, never in
+# the repo. Prompt for it on first install; skip if already set or if
+# there's no terminal (the app will generate a random one on first run).
+DATA_ROOT="$HOME/Documents/OTEKH Digitization Manager"
+PW_FILE="$DATA_ROOT/admin_password.txt"
+if [[ ! -s "$PW_FILE" && -t 0 ]]; then
+  mkdir -p "$DATA_ROOT"
+  echo ""
+  echo "Set the password for the hidden recovery admin account ('admin')."
+  echo "It is stored in: $PW_FILE"
+  while true; do
+    read -r -s -p "Admin password: " pw1; echo ""
+    read -r -s -p "Confirm password: " pw2; echo ""
+    if [[ -z "$pw1" ]]; then
+      echo "Password cannot be empty."
+    elif [[ "$pw1" != "$pw2" ]]; then
+      echo "Passwords do not match - try again."
+    else
+      printf '%s\n' "$pw1" > "$PW_FILE"
+      chmod 600 "$PW_FILE"
+      unset pw1 pw2
+      break
+    fi
+  done
+fi
+
 # --- record install paths for update/uninstall ---
 CONFIG_DIR="$HOME/.digitization_manager"
 mkdir -p "$CONFIG_DIR"

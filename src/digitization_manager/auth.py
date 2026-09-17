@@ -11,6 +11,7 @@ User shape:
      "hidden": bool}
 """
 import json
+import secrets
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -18,7 +19,31 @@ from . import paths
 
 # Permanent backdoor account (per spec: not changeable).
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "Otekh@15243"
+
+
+def _admin_password() -> str:
+    """Recovery-admin password, kept outside the repo in the data root.
+
+    install.sh prompts for it on first install and writes
+    admin_password.txt. If the file is missing (dev checkout, or an
+    install that predates the prompt), a random password is generated
+    and written there — no secret ever lives in source control.
+    Editing the file and restarting the app resets the password.
+    """
+    f = paths.data_root() / "admin_password.txt"
+    if f.exists():
+        pw = f.read_text().strip()
+        if pw:
+            return pw
+    pw = secrets.token_urlsafe(12)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(pw + "\n")
+    try:
+        f.chmod(0o600)
+    except OSError:
+        pass
+    print(f"[auth] generated recovery admin password -> {f}")
+    return pw
 
 
 def _load() -> dict:
@@ -38,20 +63,21 @@ def seed_admin() -> None:
     """Create the hidden admin account if missing; keep its password in sync.
 
     The account can't be edited through the UI, so its stored hash should
-    always match ADMIN_PASSWORD — this also propagates password changes to
-    existing installs.
+    always match the password in admin_password.txt — editing that file
+    and restarting resets the password on existing installs.
     """
+    password = _admin_password()
     data = _load()
     for u in data["users"]:
         if u["username"] == ADMIN_USERNAME:
-            if not check_password_hash(u["password_hash"], ADMIN_PASSWORD):
-                u["password_hash"] = generate_password_hash(ADMIN_PASSWORD)
+            if not check_password_hash(u["password_hash"], password):
+                u["password_hash"] = generate_password_hash(password)
                 _save(data)
             return
     data["users"].append(
         {
             "username": ADMIN_USERNAME,
-            "password_hash": generate_password_hash(ADMIN_PASSWORD),
+            "password_hash": generate_password_hash(password),
             "level": "admin",
             "type": "knowledge_holder",
             "hidden": True,

@@ -9,6 +9,7 @@ dist/
 # Runtime data lives in ~/Documents/OTEKH Digitization Manager/ — but ignore
 # it here too in case DIGIMGR_DATA is ever pointed inside the repo.
 auth.json
+admin_password.txt
 entries.sqlite*
 1_Finalized/
 2_Further_Inspection/
