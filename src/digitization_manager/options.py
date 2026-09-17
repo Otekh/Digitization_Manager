@@ -8,10 +8,10 @@ Theme <-> Sub-theme mapping is positional: the Theme column's Nth value owns
 the "SubN" column. (Sub column headers name their parent theme loosely, so
 position is more reliable than name matching.)
 """
-import csv
-from functools import lru_cache
+import csv                      # components.csv read/write
+from functools import lru_cache  # parse once per change, not per request
 
-from . import paths
+from . import paths  # locates components.csv (installed copy, then source)
 
 # Columns whose values are "CODE, Description" pairs.
 CODED_COLUMNS = {"Media Type", "Collection, Source", "Location", "Equipment ID"}
@@ -235,6 +235,7 @@ def edit_option(field: str, old_label: str, new_label: str,
 
 
 def _theme_col(raw_header: list[str]) -> int:
+    """Index of the Theme column."""
     return _col_index(raw_header, "Theme")
 
 
@@ -297,6 +298,7 @@ def edit_theme(old: str, new: str) -> None:
 
 
 def add_subtheme(theme: str, label: str) -> None:
+    """Append a sub-theme to a theme's Sub column."""
     label = label.strip()
     if not label:
         raise ValueError("Sub-theme name is required.")
@@ -312,6 +314,7 @@ def add_subtheme(theme: str, label: str) -> None:
 
 
 def delete_subtheme(theme: str, label: str) -> None:
+    """Remove a sub-theme from a theme's Sub column."""
     raw_header, cols = _read_table()
     ti = _theme_col(raw_header)
     if theme not in cols[ti]:
@@ -324,6 +327,7 @@ def delete_subtheme(theme: str, label: str) -> None:
 
 
 def edit_subtheme(theme: str, old: str, new: str) -> None:
+    """Rename a sub-theme (duplicates rejected, case-insensitive)."""
     new = new.strip()
     if not new:
         raise ValueError("Sub-theme name is required.")

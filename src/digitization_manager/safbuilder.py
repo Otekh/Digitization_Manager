@@ -8,15 +8,15 @@ the pre-built shaded jar directly:
 SAFBuilder writes <name>.zip next to the input CSV; we move it into
 4_DSpace_Packages.
 """
-import json
-import random
-import shutil
-import string
-import subprocess
-from datetime import datetime
+import json        # manifest written beside each zip
+import random      # package ID generation
+import shutil      # moving the zip + checking for java
+import string      # package ID alphabet
+import subprocess  # running the SAFBuilder jar
+from datetime import datetime  # package name timestamp + manifest
 from pathlib import Path
 
-from . import paths
+from . import paths  # archive folders + jar location
 
 
 def _package_id() -> str:
@@ -42,7 +42,7 @@ def run_safbuilder(dest_dir: Path | None = None) -> Path:
         raise FileNotFoundError("3_Verified has no data.csv (no verified entries).")
 
     # Record which entries are going into this package (for the manifest).
-    from . import store
+    from . import store  # lazy: store imports csv_export, keep cycles out
     entry_titles = [e["metadata"].get("title", "") for e in store.list_entries("verified")]
 
     out_name = f"{_package_id()}_saf_{datetime.now().strftime('%Y%m%d_%H%M%S')}"

@@ -6,9 +6,10 @@ moved to another drive or machine without breaking anything.
 Default root:  ~/Documents/OTEKH Digitization Manager/
 Override with the DIGIMGR_DATA environment variable.
 """
-import os
+import os          # DIGIMGR_DATA env override
 from pathlib import Path
 
+# Folder name under ~/Documents that holds the whole archive.
 APP_DIR_NAME = "OTEKH Digitization Manager"
 
 # Status name -> folder name inside the data root.
@@ -21,6 +22,8 @@ FOLDERS = {
 
 
 def data_root() -> Path:
+    """The archive root: DIGIMGR_DATA override, else
+    ~/Documents/OTEKH Digitization Manager."""
     override = os.environ.get("DIGIMGR_DATA")
     if override:
         return Path(override).expanduser()
@@ -28,18 +31,22 @@ def data_root() -> Path:
 
 
 def folder(status: str) -> Path:
+    """The numbered workflow folder for a status."""
     return data_root() / FOLDERS[status]
 
 
 def auth_file() -> Path:
+    """User accounts JSON (hashed passwords)."""
     return data_root() / "auth.json"
 
 
 def db_file() -> Path:
+    """SQLite entry database."""
     return data_root() / "entries.sqlite"
 
 
 def ensure_data_dirs() -> Path:
+    """Create the archive root + all four status folders if missing."""
     root = data_root()
     for name in FOLDERS.values():
         (root / name).mkdir(parents=True, exist_ok=True)
@@ -65,4 +72,5 @@ def components_csv() -> Path:
 
 
 def safbuilder_jar() -> Path:
+    """The pre-built shaded SAFBuilder jar bundled with the app."""
     return project_root() / "SAFBuilder" / "target" / "safbuilder-1.6.jar"

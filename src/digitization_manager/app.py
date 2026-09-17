@@ -3,16 +3,16 @@
 Run model: one lab machine runs this server; everyone connects over the LAN
 with a browser. All state lives under the data root (see paths.py).
 """
-import functools
-import json
-import os
-import re
-import secrets
-import threading
-from datetime import datetime
-from pathlib import Path
+import functools   # functools.wraps keeps endpoint names under decorators
+import json        # SAF package manifests (zip -> entry list)
+import os          # os._exit for the shutdown route
+import re          # date-format validation patterns
+import secrets     # session secret key generation
+import threading   # delayed shutdown so the response reaches the browser
+from datetime import datetime  # date validation + package timestamps
+from pathlib import Path       # upload filenames / entry directories
 
-from flask import (
+from flask import (  # web framework: app object, routing, sessions, templates
     Flask,
     abort,
     flash,
@@ -23,10 +23,15 @@ from flask import (
     session,
     url_for,
 )
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename  # sanitize uploaded filenames
 
+# App modules: auth = user accounts, ocr = PDF text-layer jobs,
+# options = dropdown metadata, paths = archive locations,
+# safbuilder = DSpace packaging, store = entry database + file moves.
 from . import APP_NAME, __version__, auth, ocr, options, paths, safbuilder, store
 
+# Date Created field: format key -> (form label, validation regex).
+# "unknown" has no pattern because it needs no value.
 DATE_FORMATS = {
     "year": ("Year only (YYYY)", re.compile(r"^\d{4}$")),
     "month_year": ("Month/Year (MM/YYYY)", re.compile(r"^\d{2}/\d{4}$")),
@@ -34,6 +39,8 @@ DATE_FORMATS = {
     "unknown": ("Unknown", None),
 }
 
+# Internal status key -> human label shown in flash messages and tabs.
+# "returned" is not a folder: returned entries keep their files in place.
 STATUS_LABELS = {
     "finalized": "Finalized",
     "inspection": "Further Inspection",
@@ -45,6 +52,9 @@ STATUS_LABELS = {
 # ---------------------------------------------------------------- app setup
 
 def create_app() -> Flask:
+    """Build the Flask app and make sure the data root is ready:
+    archive folders exist, the hidden admin is seeded, the SQLite
+    entry store is initialized, and sessions have a secret key."""
     app = Flask(__name__)
     paths.ensure_data_dirs()
     auth.seed_admin()
@@ -64,11 +74,13 @@ def _secret_key() -> str:
 # ---------------------------------------------------------------- helpers
 
 def current_user() -> dict | None:
+    """The logged-in user record from auth.json, or None."""
     username = session.get("username")
     return auth.get_user(username) if username else None
 
 
 def login_required(view):
+    """Route guard: bounce anonymous users to the login page."""
     @functools.wraps(view)
     def wrapped(*args, **kwargs):
         if not current_user():
@@ -78,6 +90,7 @@ def login_required(view):
 
 
 def admin_required(view):
+    """Route guard: login required, and level must be 'admin'."""
     @functools.wraps(view)
     def wrapped(*args, **kwargs):
         u = current_user()
@@ -90,6 +103,8 @@ def admin_required(view):
 
 
 def knowledge_holder_required(view):
+    """Route guard: login required, and type must be 'knowledge_holder'
+    (Folder 2 / inspection entries are restricted to them)."""
     @functools.wraps(view)
     def wrapped(*args, **kwargs):
         u = current_user()
@@ -102,6 +117,8 @@ def knowledge_holder_required(view):
 
 
 def _valid_date(fmt: str, value: str) -> bool:
+    """Check a Date Created value against its chosen format — regex for
+    shape, strptime for real-calendar validity (e.g. rejects 31/02)."""
     if fmt == "unknown":
         return True
     pattern = DATE_FORMATS[fmt][1]
@@ -280,6 +297,9 @@ def _collect_flags(form) -> dict:
 
 
 def _form_context(entry: dict | None = None, error_fields: set | None = None) -> dict:
+    """Template context shared by the new-entry and edit-entry forms:
+    dropdown options, date formats, the entry being edited (if any),
+    which fields have validation errors, and flagging permissions."""
     opts = options.load_options()
     return {
         "opts": opts,
@@ -304,6 +324,9 @@ app = create_app()
 
 @app.context_processor
 def inject_globals():
+    """Values available in every template: app identity, the current
+    user, per-status entry counts (tab badges), and how many returned
+    entries belong to this user (Returned Entries badge)."""
     u = current_user()
     c = store.counts() if u else {}
     my_returned = 0
@@ -325,6 +348,8 @@ def inject_globals():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    """Username/password login. On success the username goes into the
+    signed session cookie; every guarded route reads it from there."""
     if request.method == "POST":
         u = auth.verify(
             request.form.get("username", ""), request.form.get("password", "")
@@ -338,6 +363,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    """Sign Out: drop the whole session."""
     session.clear()
     return redirect(url_for("login"))
 
@@ -345,6 +371,7 @@ def logout():
 @app.route("/")
 @login_required
 def index():
+    """Landing page just forwards to the New Entry form."""
     return redirect(url_for("new_entry"))
 
 
@@ -353,6 +380,9 @@ def index():
 @app.route("/entry/new", methods=["GET", "POST"])
 @login_required
 def new_entry():
+    """New Entry form. POST validates metadata + uploads, saves files
+    into the target status folder (1_Finalized or 2_Further_Inspection),
+    and records the entry in the store."""
     if request.method == "POST":
         action = request.form.get("action")
         if action not in ("finalized", "inspection"):
@@ -381,6 +411,10 @@ def new_entry():
 @app.route("/entry/<entry_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_entry(entry_id):
+    """Edit an existing entry. Two cases: the creator fixing a returned
+    entry, or a knowledge holder reviewing an inspection entry (where
+    flags decide whether it goes back to the creator or forward to
+    admin review)."""
     u = current_user()
     entry = store.get_entry(entry_id)
     if not entry:
@@ -452,6 +486,8 @@ def edit_entry(entry_id):
 @app.route("/returned")
 @login_required
 def returned_entries():
+    """Returned Entries tab: entries sent back to their creator with
+    flags/notes. Each user only sees their own."""
     u = current_user()
     entries = [
         e for e in store.list_entries("returned")
@@ -467,6 +503,8 @@ def returned_entries():
 @app.route("/review")
 @admin_required
 def review():
+    """Verify Entries tab (admin): finalized entries awaiting the
+    verify / inspect / return decision."""
     entries = store.list_entries("finalized")
     return render_template(
         "list.html", title="Review Entries", entries=entries, mode="review"
@@ -476,6 +514,8 @@ def review():
 @app.route("/inspect")
 @knowledge_holder_required
 def inspect():
+    """Inspect Entries tab (knowledge holders): entries in Folder 2
+    needing expert review."""
     entries = store.list_entries("inspection")
     return render_template(
         "list.html", title="Inspect Existing Entries", entries=entries, mode="inspect"
@@ -485,6 +525,8 @@ def inspect():
 @app.route("/verified")
 @admin_required
 def verified_entries():
+    """View Verified Entries tab (admin): everything sitting in
+    3_Verified waiting for the next SAF package build."""
     entries = store.list_entries("verified")
     return render_template(
         "list.html", title="View Verified Entries", entries=entries, mode="verified"
@@ -494,6 +536,8 @@ def verified_entries():
 @app.route("/entry/<entry_id>")
 @login_required
 def entry_detail(entry_id):
+    """Entry detail page: metadata, files, return note, and the admin
+    action bar (verify / inspect / return) when applicable."""
     u = current_user()
     entry = store.get_entry(entry_id)
     if not entry:
@@ -517,6 +561,9 @@ def entry_detail(entry_id):
 @app.route("/entry/<entry_id>/file/<path:filename>")
 @login_required
 def entry_file(entry_id, filename):
+    """Serve an attached file inline. Only files recorded on the entry
+    are served (no directory traversal), and Folder 2 files stay
+    restricted to knowledge holders."""
     u = current_user()
     entry = store.get_entry(entry_id)
     if not entry or filename not in entry["files"]:
@@ -533,6 +580,9 @@ def entry_file(entry_id, filename):
 @app.route("/entry/<entry_id>/verify", methods=["POST"])
 @admin_required
 def verify_entry(entry_id):
+    """Synchronous verify fallback (form POST without JS): OCR all PDFs
+    inline, then move the entry to 3_Verified. Admins cannot verify
+    their own entries."""
     u = current_user()
     entry = store.get_entry(entry_id)
     if not entry or entry["status"] not in ("finalized", "inspection"):
@@ -561,7 +611,8 @@ def verify_entry(entry_id):
 @app.route("/entry/<entry_id>/verify_start", methods=["POST"])
 @admin_required
 def verify_start(entry_id):
-    """Start a background OCR job; the detail page polls ocr_status."""
+    """Start a background OCR job; the detail page polls ocr_status
+    and shows the progress modal. Returns JSON {job_id}."""
     u = current_user()
     entry = store.get_entry(entry_id)
     if not entry or entry["status"] not in ("finalized", "inspection"):
@@ -574,6 +625,7 @@ def verify_start(entry_id):
 @app.route("/ocr_status/<job_id>")
 @admin_required
 def ocr_status(job_id):
+    """JSON poll endpoint for the OCR progress modal."""
     job = ocr.get_job(job_id)
     if not job:
         abort(404)
@@ -603,6 +655,8 @@ def verify_commit(entry_id, job_id):
 @app.route("/entry/<entry_id>/inspect_move", methods=["POST"])
 @admin_required
 def inspect_move(entry_id):
+    """Admin action: send a finalized entry to Folder 2 for expert
+    inspection, with an optional note."""
     entry = store.get_entry(entry_id)
     if not entry or entry["status"] != "finalized":
         abort(404)
@@ -617,6 +671,8 @@ def inspect_move(entry_id):
 @app.route("/entry/<entry_id>/return", methods=["POST"])
 @admin_required
 def return_entry(entry_id):
+    """Admin action: send an entry back to its creator with flagged
+    fields and a note. Works from finalized, inspection, or verified."""
     entry = store.get_entry(entry_id)
     if not entry or entry["status"] not in ("finalized", "inspection", "verified"):
         abort(404)
@@ -635,6 +691,9 @@ def return_entry(entry_id):
 @app.route("/prepare", methods=["GET", "POST"])
 @admin_required
 def prepare():
+    """Prepare for DSpace tab. GET lists verified entries + past
+    packages. POST runs SAFBuilder, purges the verified entries (their
+    files now live in the zip), and downloads it to the browser."""
     if request.method == "POST":
         try:
             # Build into 4_DSpace_Packages (a copy stays in the archive),
@@ -687,6 +746,8 @@ def _list_packages() -> list[dict]:
 @app.route("/saf-packages")
 @admin_required
 def saf_packages():
+    """SAF Packages tab: every zip in 4_DSpace_Packages with download
+    and delete actions."""
     return render_template("saf_packages.html", packages=_list_packages())
 
 
@@ -745,6 +806,8 @@ def saf_package_delete():
 @app.route("/metadata-settings")
 @admin_required
 def metadata_settings():
+    """Metadata Settings page (admin): collapsible sections for every
+    dropdown plus themes/sub-themes, with add/edit/delete forms."""
     opts = options.load_options()
     return render_template(
         "metadata_settings.html",
@@ -769,6 +832,7 @@ def _meta_edit(fn, *args, ok: str):
 @app.route("/metadata-settings/option/add", methods=["POST"])
 @admin_required
 def metadata_option_add():
+    """Add a dropdown option (code required for coded fields)."""
     field = request.form.get("field", "")
     label = request.form.get("label", "")
     code = request.form.get("code", "")
@@ -781,6 +845,7 @@ def metadata_option_add():
 @app.route("/metadata-settings/option/edit", methods=["POST"])
 @admin_required
 def metadata_option_edit():
+    """Rename a dropdown option (and its code for coded fields)."""
     field = request.form.get("field", "")
     old = request.form.get("old_label", "")
     label = request.form.get("label", "")
@@ -794,6 +859,7 @@ def metadata_option_edit():
 @app.route("/metadata-settings/option/delete", methods=["POST"])
 @admin_required
 def metadata_option_delete():
+    """Remove a dropdown option."""
     field = request.form.get("field", "")
     label = request.form.get("label", "")
     return _meta_edit(
@@ -805,6 +871,8 @@ def metadata_option_delete():
 @app.route("/metadata-settings/theme/add", methods=["POST"])
 @admin_required
 def metadata_theme_add():
+    """Add a theme; the textarea supplies its initial sub-themes
+    (at least one required)."""
     theme = request.form.get("theme", "")
     subs = request.form.get("subthemes", "").splitlines()
     return _meta_edit(
@@ -816,6 +884,7 @@ def metadata_theme_add():
 @app.route("/metadata-settings/theme/edit", methods=["POST"])
 @admin_required
 def metadata_theme_edit():
+    """Rename a theme (its Sub column header is updated too)."""
     old = request.form.get("old_theme", "")
     theme = request.form.get("theme", "")
     return _meta_edit(
@@ -827,6 +896,7 @@ def metadata_theme_edit():
 @app.route("/metadata-settings/theme/delete", methods=["POST"])
 @admin_required
 def metadata_theme_delete():
+    """Delete a theme and its whole Sub column."""
     theme = request.form.get("theme", "")
     return _meta_edit(
         options.delete_theme, theme,
@@ -837,6 +907,7 @@ def metadata_theme_delete():
 @app.route("/metadata-settings/subtheme/add", methods=["POST"])
 @admin_required
 def metadata_subtheme_add():
+    """Add a sub-theme under an existing theme."""
     theme = request.form.get("theme", "")
     label = request.form.get("label", "")
     return _meta_edit(
@@ -848,6 +919,7 @@ def metadata_subtheme_add():
 @app.route("/metadata-settings/subtheme/edit", methods=["POST"])
 @admin_required
 def metadata_subtheme_edit():
+    """Rename a sub-theme."""
     theme = request.form.get("theme", "")
     old = request.form.get("old_label", "")
     label = request.form.get("label", "")
@@ -860,6 +932,7 @@ def metadata_subtheme_edit():
 @app.route("/metadata-settings/subtheme/delete", methods=["POST"])
 @admin_required
 def metadata_subtheme_delete():
+    """Remove a sub-theme from a theme."""
     theme = request.form.get("theme", "")
     label = request.form.get("label", "")
     return _meta_edit(
@@ -873,6 +946,8 @@ def metadata_subtheme_delete():
 @app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
+    """Profile Settings: change own username/password (current password
+    required). Renaming updates the session so the user stays logged in."""
     u = current_user()
     if request.method == "POST":
         new_username = request.form.get("username", "").strip()
@@ -899,6 +974,8 @@ def profile():
 @app.route("/users", methods=["GET", "POST"])
 @admin_required
 def users():
+    """User Settings (admin): add/delete users, reset passwords, and
+    change level/type. The hidden admin never appears in the list."""
     if request.method == "POST":
         action = request.form.get("action")
         username = request.form.get("username", "")

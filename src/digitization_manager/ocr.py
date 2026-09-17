@@ -4,18 +4,19 @@ Runs when an admin verifies an entry: every PDF attached to the entry is
 OCR'd before the files move to 3_Verified. Requires tesseract and
 ghostscript on the server machine.
 """
-import os
-import re
-import shutil
-import subprocess
-import sys
-import tempfile
-import threading
-import uuid
+import os          # os.replace for atomic in-place PDF swaps
+import re          # scraping ocrmypdf's 'NN%' progress output
+import shutil      # shutil.which to detect tesseract/ghostscript
+import subprocess  # running ocrmypdf as a child process
+import sys         # sys.executable -> run ocrmypdf in this venv
+import tempfile    # temp output file beside the source PDF
+import threading   # background job threads + the jobs lock
+import uuid        # job IDs
 from pathlib import Path
 
 
 def _is_pdf(path: Path) -> bool:
+    """Check the %PDF- magic bytes (more reliable than the extension)."""
     try:
         with path.open("rb") as f:
             return f.read(5) == b"%PDF-"
@@ -97,11 +98,14 @@ def has_text_layer(pdf: Path) -> bool:
 # Async OCR jobs (progress tracking for the verify modal)
 # ---------------------------------------------------------------------------
 
+# In-memory job table: job_id -> status dict. Lives only while the
+# server runs; jobs are short-lived so nothing needs persisting.
 _JOBS: dict[str, dict] = {}
 _JOBS_LOCK = threading.Lock()
 
 
 def get_job(job_id: str) -> dict | None:
+    """Snapshot of a job's status dict for the polling route."""
     with _JOBS_LOCK:
         job = _JOBS.get(job_id)
         return dict(job) if job else None
@@ -133,12 +137,16 @@ def start_ocr_job(entry_id: str, by: str) -> str:
 
 
 def _set(job_id: str, **kw) -> None:
+    """Thread-safe update of job fields from the worker thread."""
     with _JOBS_LOCK:
         if job_id in _JOBS:
             _JOBS[job_id].update(kw)
 
 
 def _run_job(job_id: str) -> None:
+    """Worker: walk the entry's PDFs, skip ones that already have a
+    text layer, OCR the rest with live progress, then mark the job
+    done / skipped / error for the modal to pick up."""
     from . import store  # lazy: avoid import cycle at module load
 
     job = get_job(job_id)

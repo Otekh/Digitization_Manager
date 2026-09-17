@@ -10,14 +10,14 @@ Statuses:
 Each folder's data.csv is regenerated from this DB after every change, so the
 CSV always matches the folder's current entries.
 """
-import json
-import shutil
-import sqlite3
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
+import json     # metadata/files/history/flags are stored as JSON columns
+import shutil   # moving entry files between status folders
+import sqlite3  # the entry database (entries.sqlite in the data root)
+import uuid     # entry IDs
+from datetime import datetime, timezone  # timestamps on rows + history
+from pathlib import Path                 # entry file locations
 
-from . import csv_export, paths
+from . import csv_export, paths  # CSV regeneration + archive locations
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -36,10 +36,13 @@ CREATE TABLE IF NOT EXISTS entries (
 
 
 def _now() -> str:
+    """UTC timestamp for created_at/updated_at/history entries."""
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _connect() -> sqlite3.Connection:
+    """Open the entry DB. WAL mode lets browsers read while a write
+    is in progress (several lab machines hit this server at once)."""
     paths.ensure_data_dirs()
     conn = sqlite3.connect(paths.db_file())
     conn.row_factory = sqlite3.Row
@@ -48,6 +51,8 @@ def _connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    """Create the entries table if needed and apply cheap migrations
+    for columns added after first release."""
     with _connect() as conn:
         conn.executescript(SCHEMA)
         # Migrate DBs created before the flags column existed.
@@ -60,6 +65,7 @@ def init_db() -> None:
 
 
 def _row_to_entry(row: sqlite3.Row) -> dict:
+    """Decode a DB row into an entry dict (JSON columns -> objects)."""
     e = dict(row)
     e["metadata"] = json.loads(e["metadata"])
     e["files"] = json.loads(e["files"])
@@ -74,12 +80,14 @@ def _row_to_entry(row: sqlite3.Row) -> dict:
 
 
 def get_entry(entry_id: str) -> dict | None:
+    """Fetch one entry by ID, or None."""
     with _connect() as conn:
         row = conn.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
     return _row_to_entry(row) if row else None
 
 
 def list_entries(status: str) -> list[dict]:
+    """All entries in a status, oldest first."""
     with _connect() as conn:
         rows = conn.execute(
             "SELECT * FROM entries WHERE status = ? ORDER BY created_at", (status,)
@@ -88,6 +96,7 @@ def list_entries(status: str) -> list[dict]:
 
 
 def counts() -> dict:
+    """{status: count} for the tab badges."""
     with _connect() as conn:
         rows = conn.execute(
             "SELECT status, COUNT(*) AS n FROM entries GROUP BY status"
@@ -96,10 +105,13 @@ def counts() -> dict:
 
 
 def _append_history(entry: dict, by: str, event: str, note: str = "") -> None:
+    """Record an audit event on the entry (who did what, when, why)."""
     entry["history"].append({"at": _now(), "by": by, "event": event, "note": note})
 
 
 def _save_entry(conn: sqlite3.Connection, entry: dict) -> None:
+    """Write a mutated entry dict back to its row (JSON-encoding the
+    object columns) and bump updated_at."""
     entry["updated_at"] = _now()
     conn.execute(
         """UPDATE entries SET status=?, updated_at=?, verified_by=?,
@@ -118,11 +130,15 @@ def _save_entry(conn: sqlite3.Connection, entry: dict) -> None:
 
 
 def _regen_csvs(*statuses: str) -> None:
+    """Rewrite the data.csv for each affected status folder so it always
+    matches the DB (the CSV is what SAFBuilder reads)."""
     for status in set(statuses):
         csv_export.write_folder_csv(status, list_entries(status))
 
 
 def create_entry(metadata: dict, files: list[str], username: str, status: str) -> dict:
+    """Insert a new entry row (files are already saved on disk by the
+    caller) and regenerate the folder CSV."""
     entry = {
         "id": uuid.uuid4().hex[:12],
         "status": status,
@@ -160,6 +176,7 @@ def create_entry(metadata: dict, files: list[str], username: str, status: str) -
 
 
 def update_metadata(entry_id: str, metadata: dict, files: list[str], by: str) -> None:
+    """Replace an entry's metadata + file list after an edit."""
     entry = get_entry(entry_id)
     entry["metadata"] = metadata
     entry["files"] = files
@@ -172,6 +189,7 @@ def update_metadata(entry_id: str, metadata: dict, files: list[str], by: str) ->
 
 
 def _move_files(entry: dict, from_status: str, to_status: str) -> None:
+    """Physically move the entry's files between status folders."""
     src_dir = paths.folder(from_status)
     dst_dir = paths.folder(to_status)
     dst_dir.mkdir(parents=True, exist_ok=True)

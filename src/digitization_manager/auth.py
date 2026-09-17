@@ -10,12 +10,13 @@ User shape:
      "type": "lab_member" | "knowledge_holder",
      "hidden": bool}
 """
-import json
-import secrets
+import json     # auth.json read/write
+import secrets  # random recovery password when admin_password.txt is absent
 
+# Salted password hashing (PBKDF2) — plaintext is never stored.
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import paths
+from . import paths  # data root: auth.json + admin_password.txt live there
 
 # Permanent backdoor account (per spec: not changeable).
 ADMIN_USERNAME = "admin"
@@ -47,6 +48,7 @@ def _admin_password() -> str:
 
 
 def _load() -> dict:
+    """Read auth.json; an empty user list when it doesn't exist yet."""
     f = paths.auth_file()
     if not f.exists():
         return {"users": []}
@@ -54,6 +56,7 @@ def _load() -> dict:
 
 
 def _save(data: dict) -> None:
+    """Write the user table back to auth.json."""
     f = paths.auth_file()
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(json.dumps(data, indent=2))
@@ -87,6 +90,7 @@ def seed_admin() -> None:
 
 
 def get_user(username: str) -> dict | None:
+    """Fetch a user record (including hidden ones), or None."""
     for u in _load()["users"]:
         if u["username"] == username:
             return u
@@ -94,6 +98,7 @@ def get_user(username: str) -> dict | None:
 
 
 def verify(username: str, password: str) -> dict | None:
+    """Check credentials; returns the user record on success, else None."""
     u = get_user(username)
     if u and check_password_hash(u["password_hash"], password):
         return u
@@ -133,6 +138,7 @@ def add_user(username: str, password: str, level: str, utype: str) -> str | None
 
 
 def delete_user(username: str) -> None:
+    """Remove a user. Hidden accounts (the recovery admin) survive."""
     data = _load()
     data["users"] = [
         u for u in data["users"] if u["username"] != username or u.get("hidden")

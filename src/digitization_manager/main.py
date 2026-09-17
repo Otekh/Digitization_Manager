@@ -3,13 +3,13 @@
 Starts the LAN server on the host machine and opens a browser. Other lab
 machines connect to http://<this-machine-ip>:<port> over the wired network.
 """
-import argparse
-import errno
-import socket
-import subprocess
-import sys
-import threading
-import webbrowser
+import argparse    # CLI flags (--port, --update, --uninstall, ...)
+import errno       # EADDRINUSE check for the port-in-use message
+import socket      # LAN IP detection for the share-address printout
+import subprocess  # running update.sh / uninstall.sh
+import sys         # exit codes + stderr
+import threading   # delayed browser open
+import webbrowser  # opening the app URL on the host machine
 from pathlib import Path
 
 from . import APP_NAME, __version__, paths
@@ -28,6 +28,8 @@ def _lan_ip() -> str:
 
 
 def _open_browser_later(url: str) -> None:
+    """Open the app URL ~1s after startup so the server is listening
+    first. Failures are ignored (headless / icon launches)."""
     def _open():
         try:
             webbrowser.open(url)
@@ -51,8 +53,11 @@ def _install_config() -> dict:
 
 
 def run_script(name: str, *script_args: str) -> int:
-    # Prefer the original project directory (recorded at install time) so
-    # update/uninstall run against the real source, not the installed copy.
+    """Run a project shell script (update.sh / uninstall.sh).
+
+    Prefer the original project directory (recorded at install time) so
+    update/uninstall run against the real source, not the installed copy.
+    """
     candidates = []
     project_dir = _install_config().get("PROJECT_DIR")
     if project_dir:
@@ -66,6 +71,8 @@ def run_script(name: str, *script_args: str) -> int:
 
 
 def main() -> int:
+    """CLI entry: handle --version/--update/--uninstall, otherwise start
+    the waitress server on the LAN and open a browser."""
     parser = argparse.ArgumentParser(
         prog="digitization_manager", description=APP_NAME
     )
@@ -91,7 +98,9 @@ def main() -> int:
     if args.uninstall_partial:
         return run_script("uninstall.sh", "--partial")
 
-    from waitress import serve
+    # Imported here (not at module top) so --version/--update stay fast
+    # and don't build the Flask app / data dirs unnecessarily.
+    from waitress import serve  # production WSGI server (threads, LAN-safe)
 
     from .app import app
 

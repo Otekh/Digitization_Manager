@@ -6,10 +6,11 @@ the description. dc.subject is "Theme::Sub Theme::600" pairs joined by "||".
 The trailing 'filename' column lists the entry's files joined by "||" (this
 is what SAFBuilder uses to find bitstreams).
 """
-import csv
+import csv  # writing data.csv
 
-from . import options, paths
+from . import options, paths  # code lookups + folder locations
 
+# Dublin Core columns, in the exact order SAFBuilder/DSpace expects.
 HEADER = [
     "dc.coverage.spatial",
     "dc.date.issued",
@@ -26,10 +27,13 @@ HEADER = [
     "filename",
 ]
 
+# DSpace subject authority suffix appended to every Theme::Sub pair.
 SUBJECT_SUFFIX = "600"
 
 
 def _subject_value(subjects: list[dict]) -> str:
+    """Flatten theme/sub pairs into one dc.subject cell:
+    'Theme::Sub::600||Theme::Sub::600'."""
     parts = [
         f"{s['theme']}::{s['sub']}::{SUBJECT_SUFFIX}"
         for s in subjects
@@ -39,6 +43,8 @@ def _subject_value(subjects: list[dict]) -> str:
 
 
 def entry_to_row(entry: dict) -> list[str]:
+    """Map an entry's metadata dict onto the HEADER columns. Coded
+    dropdowns export their code (e.g. 'BK'), not the label."""
     m = entry["metadata"]
     return [
         options.code_for("Location", m.get("location", "")),

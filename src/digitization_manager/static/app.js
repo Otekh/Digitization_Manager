@@ -21,12 +21,16 @@
   }
 
   // ---- theme -> sub-theme filtering + add/remove rows ----
+  // The template embeds {theme: [sub, ...]} as JSON in a script tag so
+  // picking a theme can refill its sub-theme dropdown without a request.
   var subData = {};
   var dataEl = document.getElementById("subthemes-data");
   if (dataEl) {
     try { subData = JSON.parse(dataEl.textContent); } catch (e) { subData = {}; }
   }
 
+  // Rebuild one row's sub-theme <select> for the chosen theme.
+  // "Unknown" is always offered as the last option.
   function fillSubs(subSelect, theme) {
     subSelect.innerHTML = "";
     var empty = document.createElement("option");
@@ -61,6 +65,7 @@
         }
       }
     });
+    // "Add another theme" clones the first row and resets its selects.
     var addBtn = document.getElementById("subject-add");
     if (addBtn) {
       addBtn.addEventListener("click", function () {
@@ -130,7 +135,7 @@
     syncFlagButtons();
   }
 
-  // ---- summary counter ----
+  // ---- summary counter: live char count, red under the 50-char minimum ----
   var summary = document.getElementById("summary");
   var counter = document.getElementById("summary-count");
   if (summary && counter) {
@@ -143,6 +148,9 @@
   }
 
   // ---- verify: async OCR with progress modal ----
+  // Flow: POST verify_start -> poll /ocr_status/<job> every 600ms ->
+  // on done/skipped POST verify_commit -> redirect to the review list.
+  // If fetch fails entirely we fall back to the plain form POST (sync OCR).
   var vform = document.getElementById("verify-form");
   var ocrModal = document.getElementById("ocr-modal");
   if (vform && ocrModal) {
@@ -159,12 +167,14 @@
       ocrMsg.textContent = msg || "";
       ocrModal.hidden = false;
     }
+    // Terminal failure state: hide the bar, show OK which just reloads.
     function ocrFail(msg) {
       ocrShow("OCR Failed", msg);
       ocrBar.hidden = true;
       ocrOk.hidden = false;
       ocrOk.onclick = function () { window.location.reload(); };
     }
+    // Tell the server to finalize the verification, then follow its redirect.
     function ocrCommit() {
       fetch(commitUrl.replace("JOBID", jobId), { method: "POST" })
         .then(function (r) { return r.json(); })
