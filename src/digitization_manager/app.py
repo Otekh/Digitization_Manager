@@ -71,16 +71,10 @@ def create_app() -> Flask:
     paths.ensure_data_dirs()
     auth.seed_admin()
     store.init_db()
-    app.secret_key = _secret_key()
+    # Fresh key per launch: restarting the app invalidates every
+    # session cookie, so nobody stays logged in across a restart.
+    app.secret_key = secrets.token_hex(32)
     return app
-
-
-def _secret_key() -> str:
-    """Persistent session secret, generated once into the data root."""
-    f = paths.data_root() / ".secret_key"
-    if not f.exists():
-        f.write_text(secrets.token_hex(32))
-    return f.read_text().strip()
 
 
 # ---------------------------------------------------------------- helpers
