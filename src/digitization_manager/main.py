@@ -8,22 +8,39 @@ import errno       # EADDRINUSE check for the port-in-use message
 import subprocess  # running update.sh / uninstall.sh
 import sys         # exit codes + stderr
 import threading   # delayed browser open
+import urllib.request  # probing whether the port already serves this app
 import webbrowser  # opening the app URL on the host machine
 from pathlib import Path
 
 from . import APP_NAME, __version__, paths
 
 
-def _open_browser_later(url: str) -> None:
+def _open_browser_later(url: str) -> threading.Timer:
     """Open the app URL ~1s after startup so the server is listening
-    first. Failures are ignored (headless / icon launches)."""
+    first. Failures are ignored (headless / icon launches). Returns
+    the timer so a failed startup can cancel it."""
     def _open():
         try:
             webbrowser.open(url)
         except Exception:
             pass
 
-    threading.Timer(1.0, _open).start()
+    timer = threading.Timer(1.0, _open)
+    timer.start()
+    return timer
+
+
+def _app_alive(port: int) -> bool:
+    """True if this app is already serving on the port — probes the
+    login page. Used when the icon is clicked while the server is
+    still running (browser closed but app not shut down)."""
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/login", timeout=2
+        ) as r:
+            return r.status == 200
+    except Exception:
+        return False
 
 
 def _install_config() -> dict:
@@ -99,19 +116,29 @@ def main() -> int:
     print(f"Lab machines:   http://{lan}:{args.port}")
     print("Press Ctrl+C to stop.")
 
+    browser_timer = None
     if not args.no_browser:
-        _open_browser_later(f"http://localhost:{args.port}")
+        browser_timer = _open_browser_later(f"http://localhost:{args.port}")
 
     try:
         serve(app, host=args.host, port=args.port)
     except OSError as exc:
         if exc.errno == errno.EADDRINUSE:
+            if browser_timer:
+                browser_timer.cancel()  # avoid a second tab
+            url = f"http://localhost:{args.port}"
+            if _app_alive(args.port):
+                # Icon clicked while the server is still up: just
+                # reopen the browser instead of dying silently.
+                print(f"Already running — opening {url}")
+                try:
+                    webbrowser.open(url)
+                except Exception:
+                    pass
+                return 0
             print(
-                f"\nPort {args.port} is already in use — the app is probably "
-                "already running.\n"
-                f"Open http://localhost:{args.port} in your browser, or stop "
-                "the other instance first\n"
-                "(admins: user menu → Shutdown App)."
+                f"\nPort {args.port} is already in use by another program.\n"
+                "Stop it, or pick another port with --port."
             )
             return 1
         raise
