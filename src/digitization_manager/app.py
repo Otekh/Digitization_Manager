@@ -639,6 +639,15 @@ def prepare():
             # then send it to the browser - it downloads to the client's
             # Downloads folder via the normal browser save dialog.
             result = safbuilder.run_safbuilder()
+            # The zip is the relocation target: once built, the verified
+            # entries' files + rows are removed from this machine.
+            removed = store.purge_status("verified")
+            flash(
+                f"SAF package built. {removed} verified "
+                f"{'entry' if removed == 1 else 'entries'} removed from "
+                "the archive (they live in the zip now).",
+                "ok",
+            )
             return send_from_directory(
                 result.parent, result.name, as_attachment=True
             )

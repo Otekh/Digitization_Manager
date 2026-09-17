@@ -143,6 +143,5 @@ data/components.csv         dropdown source data
 data/bulk_csv_reference.csv reference for the DSpace CSV format
 SAFBuilder/                 bundled SAFBuilder (Java) for Prepare for DSpace
 shell/                      copy of the OTEKH App Shell design system
-archive/                    original app files (kept for reference)
 install.sh / update.sh / uninstall.sh
 ```

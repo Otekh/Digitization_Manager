@@ -221,6 +221,25 @@ def entry_dir(entry: dict) -> Path:
     return paths.folder(loc)
 
 
+def purge_status(status: str) -> int:
+    """Delete every entry in a status: files on disk + DB rows.
+
+    Used after a SAF build — verified entries live on inside the zip,
+    so the archive copies are removed. Returns the number removed.
+    """
+    entries = list_entries(status)
+    if not entries:
+        return 0
+    folder = paths.folder("finalized" if status == "returned" else status)
+    with _connect() as conn:
+        for e in entries:
+            for name in e["files"]:
+                (folder / name).unlink(missing_ok=True)
+            conn.execute("DELETE FROM entries WHERE id = ?", (e["id"],))
+    _regen_csvs("finalized" if status == "returned" else status)
+    return len(entries)
+
+
 def return_note(entry: dict) -> str:
     """The note from the most recent 'returned' event (the flag reason)."""
     for h in reversed(entry["history"]):
